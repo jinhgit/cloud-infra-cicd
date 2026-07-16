@@ -27,13 +27,20 @@ tags = {
 }
 
 # -------------------------------------------------
-# Stage 1 only: EKS/ECR 꺼 두기 (기본, 비용 절감)
-# Stage 4 진행 시 enable_eks = true
+# 기능 플래그 (기본 OFF — 비용 절감)
 # -------------------------------------------------
-enable_eks = false
-enable_ecr = false
+enable_bastion = false
+enable_eks     = false
+enable_ecr     = false
 
-# EKS 옵션 (enable_eks = true 일 때 사용)
+# Bastion (enable_bastion = true)
+# 1) AWS 콘솔/CLI 로 리전에 Key Pair 생성 후 이름 입력 (SSH 사용 시)
+# 2) 키 없이 SSM 만 쓰려면 bastion_key_name = "" 유지
+# bastion_key_name      = "my-keypair"
+# bastion_instance_type = "t3.micro"
+# bastion_volume_size   = 8
+
+# EKS (enable_eks = true)
 # eks_cluster_version     = "1.29"
 # eks_node_instance_type  = "t3.medium"
 # eks_node_desired_size   = 2

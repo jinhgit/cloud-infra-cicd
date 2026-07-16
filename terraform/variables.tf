@@ -166,3 +166,31 @@ variable "eks_public_access_cidrs" {
   type        = list(string)
   default     = []
 }
+
+# ===================================================
+# Bastion Host (Stage 2)
+# ===================================================
+
+variable "enable_bastion" {
+  description = "true 시 Public 서브넷에 Bastion EC2 생성 (과금 주의 — 미사용 시 false/destroy)"
+  type        = bool
+  default     = false
+}
+
+variable "bastion_instance_type" {
+  description = "Bastion 인스턴스 타입"
+  type        = string
+  default     = "t3.micro"
+}
+
+variable "bastion_key_name" {
+  description = "EC2 Key Pair 이름 (리전에 사전 생성). 빈 문자열이면 SSM Session Manager 만 사용"
+  type        = string
+  default     = ""
+}
+
+variable "bastion_volume_size" {
+  description = "Bastion 루트 볼륨 GiB"
+  type        = number
+  default     = 8
+}

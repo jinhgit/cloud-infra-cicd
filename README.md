@@ -336,8 +336,8 @@ cloud-infra-cicd/
 ├── FE/                       # 프론트 (Nginx + 정적)
 ├── BE/                       # 백엔드 (Express)
 ├── k8s/                      # EKS 매니페스트 · Ingress
-├── terraform/                # VPC/NAT/SG + 선택 EKS/ECR
-├── docs/                     # PRD · 명세 · E2E 체크리스트 · CI
+├── terraform/                # VPC/NAT/SG + Bastion + 선택 EKS/ECR
+├── docs/                     # PRD · Bastion · E2E · CI
 └── .github/workflows/        # BE CI · Terraform CI
 ```
 
@@ -348,7 +348,7 @@ cloud-infra-cicd/
 | 단계 | 목표 | 상태 |
 |------|------|------|
 | 1 | Terraform 네트워크 (NAT 2 · RT 5 · SG) | ✅ 코드 완료 (필요 시 apply/destroy) |
-| 2 | Bastion 등 (레거시 EC2 웹은 P2) | ⚪ 선택 |
+| 2 | Bastion (`enable_bastion`) SSH/SSM | ✅ 코드 완료 |
 | 3 | GitHub Actions fmt/validate/plan + BE test | ✅ 골격·시크릿 plan 검증 |
 | 4 | EKS + Ingress + ECR 데모 | 🟡 코드·체크리스트 준비, 당일 apply |
 
@@ -364,6 +364,7 @@ cloud-infra-cicd/
 | [기능 명세서](docs/FUNCTIONAL_SPEC.md) | 기능 ID · 수락 기준 |
 | [architecture](docs/architecture.md) | 네트워크 상세 |
 | [STAGE_1_APPLY](docs/STAGE_1_APPLY.md) | 네트워크 apply 런북 |
+| [BASTION](docs/BASTION.md) | Bastion SSH / SSM 접속 |
 | [EKS_DESIGN](docs/EKS_DESIGN.md) | EKS 설계 |
 | [**EKS_E2E_CHECKLIST**](docs/EKS_E2E_CHECKLIST.md) | **데모 당일 전체 명령** |
 | [CI](docs/CI.md) | Actions · Secrets |

@@ -112,11 +112,44 @@ output "kubeconfig_command" {
 }
 
 # ===================================================
+# Bastion
+# ===================================================
+
+output "bastion_instance_id" {
+  description = "Bastion 인스턴스 ID (enable_bastion=false 이면 null)"
+  value       = try(aws_instance.bastion[0].id, null)
+}
+
+output "bastion_public_ip" {
+  description = "Bastion 공인 IP (SSH 접속용)"
+  value       = try(aws_instance.bastion[0].public_ip, null)
+}
+
+output "bastion_private_ip" {
+  description = "Bastion 사설 IP"
+  value       = try(aws_instance.bastion[0].private_ip, null)
+}
+
+output "bastion_ssh_command" {
+  description = "SSH 예시 (key pair 사용 시). 키 경로·사용자 확인 필요 (AL2023: ec2-user)"
+  value = var.enable_bastion && var.bastion_key_name != "" ? (
+    "ssh -i /path/to/${var.bastion_key_name}.pem ec2-user@${try(aws_instance.bastion[0].public_ip, "PENDING")}"
+  ) : null
+}
+
+output "bastion_ssm_command" {
+  description = "SSM Session Manager 접속 명령"
+  value = var.enable_bastion ? (
+    "aws ssm start-session --target ${try(aws_instance.bastion[0].id, "PENDING")} --region ${var.aws_region}"
+  ) : null
+}
+
+# ===================================================
 # 배포 요약
 # ===================================================
 
 output "deployment_summary" {
-  description = "배포 요약 (Stage 1 + 선택 EKS)"
+  description = "배포 요약 (Stage 1 + 선택 Bastion/EKS)"
   value = {
     project             = var.project_name
     environment         = var.environment
@@ -129,9 +162,15 @@ output "deployment_summary" {
     nat_gateways        = length(aws_nat_gateway.main)
     private_web_rts     = length(aws_route_table.private_web)
     private_db_rts      = length(aws_route_table.private_db)
+    enable_bastion      = var.enable_bastion
     enable_eks          = var.enable_eks
     enable_ecr          = var.enable_ecr || var.enable_eks
     eks_cluster_name    = local.eks_enabled ? local.eks_cluster_name : null
-    status              = local.eks_enabled ? "stage1+eks" : "stage1-ha-network"
+    bastion_public_ip   = try(aws_instance.bastion[0].public_ip, null)
+    status = (
+      var.enable_eks ? "stage1+eks" :
+      var.enable_bastion ? "stage1+bastion" :
+      "stage1-ha-network"
+    )
   }
 }

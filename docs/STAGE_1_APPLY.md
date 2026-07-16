@@ -53,6 +53,15 @@ terraform destroy
 
 NAT·EIP는 시간 과금이므로 **작업 후 destroy** 권장.
 
+## Bastion 켤 때 (Stage 2)
+
+```hcl
+enable_bastion   = true
+bastion_key_name = "your-keypair"   # SSM 만 쓰면 ""
+```
+
+접속 방법: [BASTION.md](BASTION.md)
+
 ## EKS 켤 때 (Stage 4)
 
 `terraform.tfvars`:
