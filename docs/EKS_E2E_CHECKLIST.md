@@ -215,8 +215,9 @@ aws ecr get-login-password --region "$AWS_REGION" \
   | docker login --username AWS --password-stdin "${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 
 # 저장소 루트에서 빌드
-docker build -t "${ECR_BE}:latest" ./BE
-docker build -t "${ECR_FE}:latest" ./FE
+# Mac Apple Silicon → EKS x86 노드: platform 필수
+docker build --platform linux/amd64 -t "${ECR_BE}:latest" ./BE
+docker build --platform linux/amd64 -t "${ECR_FE}:latest" ./FE
 
 docker push "${ECR_BE}:latest"
 docker push "${ECR_FE}:latest"
