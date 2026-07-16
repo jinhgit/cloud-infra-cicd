@@ -144,11 +144,22 @@ cicd/
 
 ### 앱 로컬 실행 (요약)
 
+**권장 — Docker Compose (FE+BE 통합, same-origin)**
+
+```bash
+docker compose up --build
+# FE  http://localhost:8080
+# BE  http://localhost:3000/health
+# 브라우저에서 /health, /api/hello 자동 호출 확인
+```
+
+**개별 실행**
+
 ```bash
 # Backend
-cd BE && cp .env.example .env && npm install && npm run dev
+cd BE && npm ci && npm run dev
 
-# Frontend (다른 터미널)
+# Frontend only (config.js 의 API_BASE_URL 을 http://localhost:3000 으로)
 cd FE && python3 -m http.server 8080 --directory public
 ```
 

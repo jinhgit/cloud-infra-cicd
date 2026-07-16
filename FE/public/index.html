@@ -10,13 +10,27 @@
     <main class="container">
       <h1>Cloud Infra Demo</h1>
       <p class="subtitle">IaC · 3-Tier Network · EKS · CI/CD</p>
+      <p id="runtime-meta" class="meta"></p>
+
       <section class="card">
-        <h2>Backend Health</h2>
+        <div class="card-head">
+          <h2>GET /health</h2>
+          <button type="button" id="btn-refresh" class="btn">새로고침</button>
+        </div>
         <p id="health-status" class="status pending">checking…</p>
         <pre id="health-body" class="code"></pre>
       </section>
+
+      <section class="card">
+        <h2>GET /api/hello</h2>
+        <p id="hello-status" class="status pending">checking…</p>
+        <pre id="hello-body" class="code"></pre>
+      </section>
+
       <footer>
-        <small>FE static · served for EKS / Nginx</small>
+        <small>
+          FE (Nginx) · same-origin API · Docker Compose / EKS Ingress 대응
+        </small>
       </footer>
     </main>
     <script src="/js/config.js"></script>

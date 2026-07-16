@@ -1,44 +1,43 @@
 # FE — Frontend
 
-포트폴리오용 프론트엔드. 최종적으로 **EKS + Nginx(또는 정적 서버)** 컨테이너로 배포한다.
+정적 HTML/CSS/JS + Nginx. **same-origin API** (`/health`, `/api/*`) 를 기본으로 한다.
 
-## 로컬 실행
+## 실행 방법
+
+### 1) Docker Compose (권장 — FE+BE 통합)
 
 ```bash
-# 정적 파일만 확인 (Python)
+# 저장소 루트
+docker compose up --build
+# http://localhost:8080  → /health, /api/hello 프록시됨
+```
+
+### 2) FE 이미지만
+
+```bash
 cd FE
-python3 -m http.server 8080 --directory public
-# http://localhost:8080
+docker build -t cloud-infra-fe .
+# BE 가 docker 네트워크 이름 be 로 떠 있어야 /api 프록시 동작
+docker run --rm -p 8080:80 --network container:cloud-infra-be cloud-infra-fe
+# 또는 compose 사용 권장
 ```
 
-또는 Docker:
+### 3) 정적 서버만 (프록시 없음)
 
 ```bash
-docker build -t cloud-infra-fe .
-docker run --rm -p 8080:80 cloud-infra-fe
+# BE 를 먼저 :3000 에 실행한 뒤
+# public/js/config.js 의 API_BASE_URL 을 "http://localhost:3000" 으로 변경
+python3 -m http.server 8080 --directory public
 ```
 
-## 디렉터리
+## 설정
 
-```
-FE/
-├── public/           # 정적 에셋 (Nginx document root)
-│   ├── index.html
-│   ├── css/
-│   ├── js/
-│   └── assets/
-├── nginx.conf        # 컨테이너 Nginx 설정
-├── Dockerfile
-├── .dockerignore
-└── README.md
-```
-
-## 백엔드 연동
-
-- API base URL은 `public/js/config.js`의 `API_BASE_URL` 사용
-- 로컬 기본: `http://localhost:3000`
-- 클러스터에서는 Ingress/Service DNS로 교체
+| 모드 | `API_BASE_URL` | 비고 |
+|------|----------------|------|
+| Compose / EKS Ingress | `""` (기본) | same-origin |
+| FE-only static | `http://localhost:3000` | CORS 허용됨 (BE) |
 
 ## 헬스
 
-Nginx `/` 및 (프록시 시) `/api/health` — 백엔드 헬스와 분리
+- FE: `GET /healthz` → `ok`
+- BE (프록시): `GET /health` → JSON

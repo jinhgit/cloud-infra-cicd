@@ -1,27 +1,78 @@
 (function () {
-  const statusEl = document.getElementById("health-status");
-  const bodyEl = document.getElementById("health-body");
-  const base = (window.APP_CONFIG && window.APP_CONFIG.API_BASE_URL) || "";
+  const healthStatusEl = document.getElementById("health-status");
+  const healthBodyEl = document.getElementById("health-body");
+  const helloStatusEl = document.getElementById("hello-status");
+  const helloBodyEl = document.getElementById("hello-body");
+  const metaEl = document.getElementById("runtime-meta");
+
+  const base = ((window.APP_CONFIG && window.APP_CONFIG.API_BASE_URL) || "").replace(
+    /\/$/,
+    ""
+  );
+
+  function apiUrl(path) {
+    if (!path.startsWith("/")) path = "/" + path;
+    return base + path;
+  }
+
+  async function fetchJson(path) {
+    const res = await fetch(apiUrl(path), {
+      headers: { Accept: "application/json" },
+    });
+    const data = await res.json().catch(() => ({}));
+    return { res, data };
+  }
+
+  function setStatus(el, ok, text) {
+    el.textContent = text;
+    el.className = "status " + (ok ? "ok" : "bad");
+  }
 
   async function checkHealth() {
-    const url = `${base.replace(/\/$/, "")}/health`;
     try {
-      const res = await fetch(url, { headers: { Accept: "application/json" } });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok) {
-        statusEl.textContent = `OK (${res.status})`;
-        statusEl.className = "status ok";
+      const { res, data } = await fetchJson("/health");
+      if (res.ok && data.status === "ok") {
+        setStatus(healthStatusEl, true, `OK (${res.status})`);
       } else {
-        statusEl.textContent = `Error (${res.status})`;
-        statusEl.className = "status bad";
+        setStatus(healthStatusEl, false, `Error (${res.status})`);
       }
-      bodyEl.textContent = JSON.stringify(data, null, 2);
+      healthBodyEl.textContent = JSON.stringify(data, null, 2);
     } catch (err) {
-      statusEl.textContent = "unreachable";
-      statusEl.className = "status bad";
-      bodyEl.textContent = String(err.message || err);
+      setStatus(healthStatusEl, false, "unreachable");
+      healthBodyEl.textContent = String(err.message || err);
     }
   }
 
+  async function checkHello() {
+    try {
+      const { res, data } = await fetchJson("/api/hello");
+      if (res.ok) {
+        setStatus(helloStatusEl, true, `OK (${res.status})`);
+      } else {
+        setStatus(helloStatusEl, false, `Error (${res.status})`);
+      }
+      helloBodyEl.textContent = JSON.stringify(data, null, 2);
+    } catch (err) {
+      setStatus(helloStatusEl, false, "unreachable");
+      helloBodyEl.textContent = String(err.message || err);
+    }
+  }
+
+  if (metaEl) {
+    metaEl.textContent = base
+      ? `API_BASE_URL = ${base}`
+      : "API_BASE_URL = (same-origin)";
+  }
+
+  document.getElementById("btn-refresh")?.addEventListener("click", () => {
+    healthStatusEl.textContent = "checking…";
+    healthStatusEl.className = "status pending";
+    helloStatusEl.textContent = "checking…";
+    helloStatusEl.className = "status pending";
+    checkHealth();
+    checkHello();
+  });
+
   checkHealth();
+  checkHello();
 })();

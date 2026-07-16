@@ -1,0 +1,45 @@
+# 로컬 통합 실행: FE(Nginx :8080) + BE(Node :3000)
+# FE 는 same-origin 으로 /health, /api 를 be 컨테이너에 프록시합니다.
+#
+#   docker compose up --build
+#   open http://localhost:8080
+#
+# 종료: docker compose down
+
+services:
+  be:
+    build:
+      context: ./BE
+    image: cloud-infra-be:local
+    container_name: cloud-infra-be
+    environment:
+      PORT: "3000"
+      NODE_ENV: production
+      SERVICE_NAME: cloud-infra-be
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://127.0.0.1:3000/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+  fe:
+    build:
+      context: ./FE
+    image: cloud-infra-fe:local
+    container_name: cloud-infra-fe
+    ports:
+      - "8080:80"
+    depends_on:
+      be:
+        condition: service_healthy
+    restart: unless-stopped
