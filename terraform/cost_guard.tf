@@ -42,3 +42,23 @@ check "eks_implies_nat" {
     error_message = "EKS 를 쓰려면 acknowledge_paid_aws=true 이고 nat_gateway_count 가 1 또는 2 여야 합니다 (Private 노드 아웃바운드)."
   }
 }
+
+check "paid_requires_user_confirm_phrase" {
+  assert {
+    condition = (
+      !var.acknowledge_paid_aws
+      || var.confirm_paid_apply == "YES_I_ACCEPT_AWS_CHARGES"
+    )
+    error_message = <<-EOT
+      [사용자 확인 필수] 유료 apply 이중 잠금.
+
+      acknowledge_paid_aws=true 이면 confirm_paid_apply 를 정확히 다음으로 설정:
+        confirm_paid_apply = "YES_I_ACCEPT_AWS_CHARGES"
+
+      또는 스크립트 사용 (대화형 승인):
+        ./scripts/terraform-apply-paid.sh
+
+      AI/자동화가 사용자 승인 없이 이 문구를 넣거나 terraform apply 하면 안 됩니다.
+    EOT
+  }
+}

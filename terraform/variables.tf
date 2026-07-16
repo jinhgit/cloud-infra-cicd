@@ -123,6 +123,18 @@ variable "acknowledge_paid_aws" {
   default     = false
 }
 
+# apply 시 사용자가 구두/채팅으로 승인한 뒤에만 이 문자열을 넣습니다.
+# 값: YES_I_ACCEPT_AWS_CHARGES  (그 외/빈 값이면 유료 apply 실패)
+variable "confirm_paid_apply" {
+  description = <<-EOT
+    유료 apply 이중 확인. acknowledge_paid_aws=true 일 때 반드시
+    "YES_I_ACCEPT_AWS_CHARGES" 로 설정. 평소에는 "" 유지.
+    AI/자동화는 사용자 명시 승인 없이 이 값을 넣거나 apply 하면 안 됨.
+  EOT
+  type        = string
+  default     = ""
+}
+
 variable "nat_gateway_count" {
   description = "NAT Gateway 개수. 무료 기본 0. 유료 데모 시 1(절약) 또는 2(HA). acknowledge_paid_aws=true 필요"
   type        = number

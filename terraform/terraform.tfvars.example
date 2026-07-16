@@ -25,15 +25,18 @@ tags = {
 # ★ 무료 모드 (기본) — 그대로 두세요
 # ===================================================
 acknowledge_paid_aws = false
+confirm_paid_apply   = ""
 nat_gateway_count    = 0
 enable_bastion       = false
 enable_eks           = false
 enable_ecr           = false
 
 # ===================================================
-# 유료 데모 당일만 (끝나면 전부 false + destroy)
+# 유료 데모 — 사용자 동의 후에만 (끝나면 destroy)
+# 권장: ./scripts/terraform-apply-paid.sh
 # ===================================================
 # acknowledge_paid_aws = true
+# confirm_paid_apply   = "YES_I_ACCEPT_AWS_CHARGES"
 # nat_gateway_count    = 2
 # enable_bastion       = true
 # bastion_key_name     = "cloud-infra-bastion"

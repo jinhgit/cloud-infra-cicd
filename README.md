@@ -2,10 +2,14 @@
 
 **Terraform**으로 3-Tier 보안 네트워크를 코드화하고, **Amazon EKS** 위에 FE/BE를 올려 **ALB Ingress**로 서비스하며, **GitHub Actions**로 검증 파이프라인을 돌리는 포트폴리오 프로젝트입니다.
 
-> ### 💰 기본은 무료 모드
+> ### 💰 기본은 무료 모드 · 유료는 **본인 확인 필수**
 >
-> - 일상 개발: **`./scripts/dev-free.sh`** (Docker Compose만, AWS 과금 없음)
-> - Terraform 유료 리소스(NAT/EKS/Bastion)는 `acknowledge_paid_aws = true` 일 때만 생성
+> - 일상 개발: **`./scripts/dev-free.sh`** (Docker만, 과금 없음)
+> - NAT/EKS/Bastion 등 **유료 apply** 는 아래를 **모두** 만족할 때만 가능:
+>   1. `acknowledge_paid_aws = true`
+>   2. `confirm_paid_apply = "YES_I_ACCEPT_AWS_CHARGES"` (사용자 동의 문구)
+>   3. 권장: `./scripts/terraform-apply-paid.sh` (입력 확인)
+> - **AI/자동화는 사용자 추가 승인 없이 유료 apply 금지** ([AGENTS.md](AGENTS.md))
 > - 가이드: [docs/FREE_MODE.md](docs/FREE_MODE.md)
 
 | 항목 | 내용 |
