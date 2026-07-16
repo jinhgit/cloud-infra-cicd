@@ -1,5 +1,11 @@
 # IaC 기반 클라우드 네트워크 자동화 및 CI/CD 파이프라인
 
+[![BE CI](https://github.com/jinhgit/cloud-infra-cicd/actions/workflows/be-ci.yml/badge.svg)](https://github.com/jinhgit/cloud-infra-cicd/actions/workflows/be-ci.yml)
+[![Docker Build](https://github.com/jinhgit/cloud-infra-cicd/actions/workflows/docker-build.yml/badge.svg)](https://github.com/jinhgit/cloud-infra-cicd/actions/workflows/docker-build.yml)
+[![Integration](https://github.com/jinhgit/cloud-infra-cicd/actions/workflows/integration.yml/badge.svg)](https://github.com/jinhgit/cloud-infra-cicd/actions/workflows/integration.yml)
+[![Terraform CI](https://github.com/jinhgit/cloud-infra-cicd/actions/workflows/terraform-ci.yml/badge.svg)](https://github.com/jinhgit/cloud-infra-cicd/actions/workflows/terraform-ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 **Terraform**으로 3-Tier 보안 네트워크를 코드화하고, **Amazon EKS** 위에 FE/BE를 올려 **ALB Ingress**로 서비스하며, **GitHub Actions**로 검증 파이프라인을 돌리는 포트폴리오 프로젝트입니다.
 
 > ### 💰 기본은 무료 모드 · 유료는 **본인 확인 필수**
@@ -35,6 +41,19 @@
 
 **채용/발표 한 줄:**  
 Terraform 3-Tier + Bastion/SSM + EKS(ALB Ingress) + GitHub Actions를 구현했고, 평소는 로컬 무료 개발·유료 클라우드는 명시 동의 후에만 켠다.
+
+### 데모 스크린샷 (클릭 · [전체 세트](docs/demo/README.md))
+
+| 로컬 UI (과금 0) | lab · 무료/유료 안내 |
+|------------------|----------------------|
+| ![로컬 홈](docs/demo/screenshots/01-local-home.png) | ![lab](docs/demo/screenshots/02-local-lab.png) |
+
+| EKS E2E curl 200 | 트래픽 경로 |
+|------------------|------------|
+| ![E2E](docs/demo/screenshots/03-eks-e2e-terminal.png) | ![아키텍처](docs/demo/screenshots/04-architecture-path.jpg) |
+
+> 영상 대용: 위 슬라이드 4장 + [docs/demo/README.md](docs/demo/README.md) 발표 스크립트.  
+> 라이브: `./scripts/dev-free.sh` → http://localhost:8080
 
 ---
 
@@ -398,6 +417,7 @@ cloud-infra-cicd/
 | [architecture](docs/architecture.md) | 네트워크 상세 |
 | [STAGE_1_APPLY](docs/STAGE_1_APPLY.md) | 네트워크 apply 런북 |
 | [BASTION](docs/BASTION.md) | Bastion SSH / SSM 접속 |
+| [**데모 스크린샷 세트**](docs/demo/README.md) | 로컬 UI + E2E 기록 (채용관용) |
 | [**무료 모드**](docs/FREE_MODE.md) | 과금 없이 개발하는 기본 경로 |
 | [**실습 확인 가이드**](docs/LAB_VERIFY.md) | 콘솔·CLI·FE로 상태 확인 |
 | [EKS_DESIGN](docs/EKS_DESIGN.md) | EKS 설계 |

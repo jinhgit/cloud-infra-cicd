@@ -7,6 +7,9 @@
 | 노드 | t3.small ×2 (Private Web), Ready |
 | 트래픽 | Internet → ALB → FE/BE Pod **200 OK** |
 | Bastion | SSH/SSM 유지 (점프 서버 스토리) |
+| 스크린샷 | [docs/demo/](demo/README.md) |
+
+![E2E 터미널](demo/screenshots/03-eks-e2e-terminal.png)
 
 ## 검증 curl (성공 시)
 

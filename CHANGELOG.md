@@ -6,6 +6,8 @@
 ## [Unreleased]
 
 ### Added
+- README GitHub Actions 배지 (BE / Docker / Integration / Terraform)
+- docs/demo 스크린샷 세트 (로컬 UI + E2E 터미널 + 아키텍처)
 - P1/P2: 이미지 빌드·k8s 렌더/배포 스크립트, Docker amd64 CI, 통합 테스트
 - BE `/api/info` 버전·gitSha 표시, FE 홈 연동
 - lab.html 무료/유료 모드 안내

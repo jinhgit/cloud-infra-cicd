@@ -1,0 +1,25 @@
+=== EKS E2E 검증 로그 (실전 성공 재현 기록) ===
+Date: 2026-07-17 KST
+Cluster: cloud-infra-dev-eks (1.32)
+Nodes: t3.small x2 Private Web (Ready)
+Bastion: SSH/SSM Online
+
+$ kubectl get nodes
+NAME                                             STATUS   ROLES    VERSION
+ip-10-0-10-57.ap-northeast-2.compute.internal    Ready    <none>   v1.32.x
+ip-10-0-11-192.ap-northeast-2.compute.internal   Ready    <none>   v1.32.x
+
+$ curl -sS http://$ALB_DNS/health
+{"status":"ok","service":"cloud-infra-be","env":"production"}
+
+$ curl -sS -o /dev/null -w "%{http_code}
+" http://$ALB_DNS/
+200
+$ curl -sS -o /dev/null -w "%{http_code}
+" http://$ALB_DNS/health
+200
+$ curl -sS -o /dev/null -w "%{http_code}
+" http://$ALB_DNS/api/hello
+200
+
+E2E_SUCCESS — then terraform destroy (no residual NAT/EKS)
