@@ -22,8 +22,8 @@ Internet → ALB (Public) → AWS LB Controller Ingress
 | 항목 | 값 |
 |------|-----|
 | 클러스터 이름 | `{project}-{env}-eks` → `cloud-infra-dev-eks` |
-| 버전 | 1.29 (변수로 변경) |
-| 노드 | t3.medium, desired/min 2, max 4, **Private Web** |
+| 버전 | 1.32 기본 (변수 `eks_cluster_version` 으로 변경) |
+| 노드 | **t3.small** 기본 (Free Tier 계정 호환), desired/min 2, max 4, **Private Web** |
 | API | Public+Private, Public CIDR 기본 = `my_ip` |
 | 이미지 레지스트리 | ECR `{prefix}-fe`, `{prefix}-be` |
 

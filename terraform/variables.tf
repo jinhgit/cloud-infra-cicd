@@ -126,17 +126,15 @@ variable "enable_ecr" {
 }
 
 variable "eks_cluster_version" {
-  description = "EKS Kubernetes 버전"
+  description = "EKS Kubernetes 버전 (리전 지원 버전 확인 후 설정)"
   type        = string
-  default     = "1.29"
+  default     = "1.32"
 }
-
 variable "eks_node_instance_type" {
-  description = "관리형 노드 인스턴스 타입"
+  description = "관리형 노드 인스턴스 타입 (Free Tier 계정은 t3.small/micro 등 적격 타입 필요)"
   type        = string
-  default     = "t3.medium"
+  default     = "t3.small"
 }
-
 variable "eks_node_desired_size" {
   description = "노드 desired capacity"
   type        = number

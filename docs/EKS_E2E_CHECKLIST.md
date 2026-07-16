@@ -285,9 +285,11 @@ echo "ALB_DNS=$ALB_DNS"
 
 | 증상 | 조치 |
 |------|------|
-| ImagePullBackOff | ECR 권한(노드 롤), 이미지 URL, NAT |
-| Ingress ADDRESS 공백 | Controller 로그, 서브넷 태그, `group.name` |
+| ImagePullBackOff | ECR 권한·URL·NAT · **이미지 플랫폼(amd64)** |
+| Ingress ADDRESS 공백 | Controller 로그, 서브넷 태그, **IAM 정책 최신화** (`DescribeListenerAttributes` 등) |
 | CrashLoop | `kubectl -n cloud-infra logs deploy/be` |
+| 노드 ASG Free Tier 오류 | `eks_node_instance_type` 을 `t3.small`/`t3.micro` 등 적격 타입으로 |
+| EKS version unsupported | `eks_cluster_version` 을 리전 지원 버전으로 (예: 1.32) |
 
 ---
 
