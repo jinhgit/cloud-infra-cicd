@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>실습 확인 — Cloud Infra Lab</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <style>
+      .nav {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+      }
+      .nav a {
+        color: var(--accent);
+      }
+      .check-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      .check-list li {
+        display: flex;
+        gap: 0.75rem;
+        align-items: flex-start;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #2a3a52;
+      }
+      .check-list input {
+        margin-top: 0.25rem;
+      }
+      .layer {
+        font-size: 0.75rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      code.cmd {
+        display: block;
+        background: #0d1117;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        overflow-x: auto;
+        margin: 0.5rem 0 1rem;
+        white-space: pre-wrap;
+      }
+      .note {
+        color: var(--pending);
+        font-size: 0.9rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <nav class="nav">
+        <a href="/">← 데모 홈 (API 상태)</a>
+        <a href="https://github.com/jinhgit/cloud-infra-cicd/blob/main/docs/LAB_VERIFY.md" target="_blank" rel="noopener">상세 가이드</a>
+      </nav>
+
+      <h1>실습 상황 확인</h1>
+      <p class="subtitle">로컬 FE + AWS 인프라를 나눠서 확인하세요</p>
+      <p class="note">
+        이 페이지는 브라우저에서 열립니다. AWS VPC/Bastion 은 보안상 여기서 직접 조회하지 않고,
+        체크리스트와 터미널 명령으로 확인합니다.
+      </p>
+
+      <section class="card">
+        <h2>A. 로컬 앱 (지금 이 브라우저)</h2>
+        <p class="layer">Docker Compose · 비용 0</p>
+        <ul class="check-list" id="local-checks">
+          <li>
+            <input type="checkbox" id="c-fe" />
+            <label for="c-fe"
+              ><strong>FE 응답</strong> — 아래 Live check 또는
+              <a href="/">홈</a>에서 Health OK</label
+            >
+          </li>
+          <li>
+            <input type="checkbox" id="c-be" />
+            <label for="c-be"><strong>BE /health</strong> — JSON status ok</label>
+          </li>
+          <li>
+            <input type="checkbox" id="c-hello" />
+            <label for="c-hello"><strong>BE /api/hello</strong> — Hello 메시지</label>
+          </li>
+        </ul>
+        <p id="live-status" class="status pending">checking…</p>
+        <pre id="live-body" class="code"></pre>
+        <button type="button" class="btn" id="btn-live">다시 검사</button>
+      </section>
+
+      <section class="card">
+        <h2>B. AWS 네트워크 + Bastion</h2>
+        <p class="layer">Terraform apply 한 경우 · 과금 중일 수 있음</p>
+        <p>터미널 (저장소 루트):</p>
+        <code class="cmd">./scripts/verify-lab.sh
+cd terraform
+terraform output deployment_summary
+terraform output bastion_public_ip</code>
+        <ul class="check-list">
+          <li>
+            <input type="checkbox" id="c-vpc" />
+            <label for="c-vpc">콘솔 VPC · 서브넷 6 · NAT 2 available</label>
+          </li>
+          <li>
+            <input type="checkbox" id="c-bastion" />
+            <label for="c-bastion">Bastion instance running + Public IP</label>
+          </li>
+          <li>
+            <input type="checkbox" id="c-ssh" />
+            <label for="c-ssh"
+              >SSH 접속:
+              <code>ssh -i terraform/cloud-infra-bastion.pem ec2-user@&lt;IP&gt;</code></label
+            >
+          </li>
+          <li>
+            <input type="checkbox" id="c-ssm" />
+            <label for="c-ssm">SSM PingStatus Online 또는 start-session 성공</label>
+          </li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2>C. AWS 위 FE (EKS) — 아직 안 했다면 정상</h2>
+        <p class="layer">enable_eks + 매니페스트 배포 후</p>
+        <ul class="check-list">
+          <li>
+            <input type="checkbox" id="c-eks" />
+            <label for="c-eks">kubectl get nodes → Ready ≥ 2</label>
+          </li>
+          <li>
+            <input type="checkbox" id="c-alb" />
+            <label for="c-alb">Ingress ALB DNS 로 http://&lt;ALB&gt;/ 접속</label>
+          </li>
+        </ul>
+        <p>
+          전체 절차:
+          <a href="https://github.com/jinhgit/cloud-infra-cicd/blob/main/docs/EKS_E2E_CHECKLIST.md"
+            >EKS E2E 체크리스트</a
+          >
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>D. 실습 종료 (destroy)</h2>
+        <code class="cmd">cd terraform
+terraform destroy -auto-approve
+./scripts/verify-lab.sh   # state 비었는지 확인</code>
+        <ul class="check-list">
+          <li>
+            <input type="checkbox" id="c-destroy" />
+            <label for="c-destroy">NAT available 0 · Bastion 없음 · 불필요 과금 없음</label>
+          </li>
+        </ul>
+      </section>
+
+      <footer>
+        <small>체크 상태는 이 브라우저 localStorage 에만 저장됩니다.</small>
+      </footer>
+    </main>
+    <script src="/js/lab.js"></script>
+  </body>
+</html>

@@ -365,6 +365,7 @@ cloud-infra-cicd/
 | [architecture](docs/architecture.md) | 네트워크 상세 |
 | [STAGE_1_APPLY](docs/STAGE_1_APPLY.md) | 네트워크 apply 런북 |
 | [BASTION](docs/BASTION.md) | Bastion SSH / SSM 접속 |
+| [**실습 확인 가이드**](docs/LAB_VERIFY.md) | 콘솔·CLI·FE로 상태 확인 |
 | [EKS_DESIGN](docs/EKS_DESIGN.md) | EKS 설계 |
 | [**EKS_E2E_CHECKLIST**](docs/EKS_E2E_CHECKLIST.md) | **데모 당일 전체 명령** |
 | [CI](docs/CI.md) | Actions · Secrets |
