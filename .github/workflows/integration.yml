@@ -1,0 +1,30 @@
+# Compose 통합 테스트 (과금 없음)
+name: Integration
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "FE/**"
+      - "BE/**"
+      - "docker-compose.yml"
+      - "scripts/integration-test.sh"
+      - ".github/workflows/integration.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "FE/**"
+      - "BE/**"
+      - "docker-compose.yml"
+      - "scripts/integration-test.sh"
+  workflow_dispatch:
+
+jobs:
+  compose:
+    name: docker compose curl
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Integration test
+        run: chmod +x scripts/integration-test.sh && ./scripts/integration-test.sh

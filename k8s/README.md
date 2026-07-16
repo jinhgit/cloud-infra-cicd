@@ -26,21 +26,24 @@ k8s/
     └── install.md      # IRSA + Helm 설치 절차
 ```
 
-## 적용 순서 (클러스터 Ready 후)
+## 적용 순서 (클러스터 Ready 후 · 스크립트)
 
 ```bash
 # 1) kubeconfig
 aws eks update-kubeconfig --region ap-northeast-2 --name cloud-infra-dev-eks
 
-# 2) AWS LB Controller (install.md 참고)
-# 3) 이미지 푸시 후 IMAGE 플레이스홀더 교체
-# 4) 매니페스트 적용
-kubectl apply -f k8s/namespace.yaml
-kubectl apply -f k8s/be/
-kubectl apply -f k8s/fe/
-kubectl apply -f k8s/ingress/
+# 2) AWS LB Controller — aws-load-balancer-controller/install.md
 
-# 5) ALB 주소 확인
+# 3) 이미지 (amd64) — ECR 푸시는 유료 소액 가능, 확인 후
+#    ./scripts/build-images.sh
+#    CONFIRM_ECR_PUSH=yes ./scripts/build-push-images.sh
+
+# 4) 매니페스트 렌더 + 배포
+export ECR_BE=... ECR_FE=...   # 또는 terraform output
+./scripts/render-k8s-images.sh
+./scripts/deploy-k8s.sh
+
+# 5) ALB
 kubectl -n cloud-infra get ingress
 ```
 

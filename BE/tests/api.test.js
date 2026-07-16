@@ -31,18 +31,21 @@ describe("API routes", () => {
       const data = await request(server, "/api/hello");
       assert.equal(data.status, 200);
       assert.equal(data.body.message, "Hello from BE");
+      assert.ok(data.body.gitSha);
     } finally {
       server.close();
     }
   });
 
-  it("GET /api/info returns service meta", async () => {
+  it("GET /api/info returns service meta and version", async () => {
     const server = http.createServer(app);
     await new Promise((resolve) => server.listen(0, resolve));
     try {
       const data = await request(server, "/api/info");
       assert.equal(data.status, 200);
       assert.ok(data.body.service);
+      assert.ok(data.body.version);
+      assert.ok(data.body.gitSha);
       assert.ok(typeof data.body.uptime_sec === "number");
     } finally {
       server.close();

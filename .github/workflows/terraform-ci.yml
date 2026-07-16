@@ -1,4 +1,4 @@
-# Terraform CI — fmt / validate (필수) + plan (AWS 시크릿 있을 때만)
+# Terraform CI — fmt/validate + plan (자격 있을 때) + PR 코멘트
 name: Terraform CI
 
 on:
@@ -16,16 +16,17 @@ on:
 
 permissions:
   contents: read
-  # OIDC 사용 시 주석 해제:
+  pull-requests: write
+  # OIDC 사용 시 아래 주석 해제 + docs/CI.md OIDC 설정
   # id-token: write
 
 env:
   TF_IN_AUTOMATION: "true"
   TF_INPUT: "false"
   AWS_REGION: ap-northeast-2
-  # plan 전용 더미 (실제 Bastion IP 아님 — CI 검증용 RFC 5737 문서 대역)
   TF_VAR_my_ip: "203.0.113.10/32"
   TF_VAR_acknowledge_paid_aws: "false"
+  TF_VAR_confirm_paid_apply: ""
   TF_VAR_nat_gateway_count: "0"
   TF_VAR_enable_eks: "false"
   TF_VAR_enable_bastion: "false"
@@ -34,9 +35,6 @@ env:
   TF_VAR_project_name: "cloud-infra"
 
 jobs:
-  # --------------------------------------------------
-  # 1) fmt + validate — AWS 자격 불필요 (PR 필수 통과)
-  # --------------------------------------------------
   check:
     name: fmt & validate
     runs-on: ubuntu-latest
@@ -44,33 +42,16 @@ jobs:
     defaults:
       run:
         working-directory: terraform
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.5.7"
           terraform_wrapper: false
+      - run: terraform fmt -check -recursive -diff
+      - run: terraform init -backend=false
+      - run: terraform validate -no-color
 
-      - name: terraform fmt -check
-        run: terraform fmt -check -recursive -diff
-
-      - name: terraform init
-        run: terraform init -backend=false
-
-      - name: terraform validate
-        run: terraform validate -no-color
-
-  # --------------------------------------------------
-  # 2) plan — Secrets 에 AWS 키가 있을 때만 실행
-  #    GitHub → Settings → Secrets:
-  #      AWS_ACCESS_KEY_ID
-  #      AWS_SECRET_ACCESS_KEY
-  #    (권장: 이후 OIDC 로 교체 — docs/CI.md)
-  # --------------------------------------------------
   plan:
     name: terraform plan
     needs: check
@@ -79,37 +60,47 @@ jobs:
     defaults:
       run:
         working-directory: terraform
-    # 포크 PR 등 시크릿 없는 환경에서는 plan 스킵 (check 만 필수)
     if: >
       github.event_name == 'workflow_dispatch' ||
       github.event_name == 'push' ||
       github.event.pull_request.head.repo.full_name == github.repository
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.5.7"
           terraform_wrapper: false
 
-      - name: Detect AWS credentials
+      - name: Detect AWS credentials (static key or OIDC role)
         id: aws
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
         run: |
-          if [ -n "${AWS_ACCESS_KEY_ID}" ]; then
+          if [ -n "${AWS_ROLE_ARN}" ]; then
+            echo "mode=oidc" >> "$GITHUB_OUTPUT"
             echo "configured=true" >> "$GITHUB_OUTPUT"
-            echo "AWS 자격 확인됨 — plan 진행"
+            echo "OIDC role 사용"
+          elif [ -n "${AWS_ACCESS_KEY_ID}" ]; then
+            echo "mode=keys" >> "$GITHUB_OUTPUT"
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+            echo "Access Key 사용 (OIDC 권장 — docs/CI.md)"
           else
+            echo "mode=none" >> "$GITHUB_OUTPUT"
             echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::AWS_ACCESS_KEY_ID 시크릿 없음. plan 을 건너뜁니다. docs/CI.md 참고."
+            echo "::notice::AWS 자격 없음 — plan 스킵"
           fi
 
-      - name: Configure AWS credentials
-        if: steps.aws.outputs.configured == 'true'
+      # OIDC (권장): Secrets.AWS_ROLE_ARN + permissions id-token: write
+      - name: Configure AWS (OIDC)
+        if: steps.aws.outputs.mode == 'oidc'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Configure AWS (access keys)
+        if: steps.aws.outputs.mode == 'keys'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -121,25 +112,56 @@ jobs:
         run: terraform init -backend=false
 
       - name: terraform plan
+        id: plan
         if: steps.aws.outputs.configured == 'true'
         run: |
+          set -o pipefail
           terraform plan -no-color -input=false \
             -var="my_ip=${TF_VAR_my_ip}" \
             -var="acknowledge_paid_aws=false" \
+            -var="confirm_paid_apply=" \
             -var="nat_gateway_count=0" \
             -var="enable_eks=false" \
             -var="enable_bastion=false" \
             -var="enable_ecr=false" \
-            -out=tfplan
+            -out=tfplan 2>&1 | tee plan.txt
+          echo "plan_exit=0" >> "$GITHUB_OUTPUT"
 
       - name: Upload plan artifact
         if: steps.aws.outputs.configured == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: tfplan-${{ github.sha }}
-          path: terraform/tfplan
+          path: |
+            terraform/tfplan
+            terraform/plan.txt
           retention-days: 7
+
+      - name: PR comment (plan summary)
+        if: >
+          steps.aws.outputs.configured == 'true' &&
+          github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let body = '## Terraform plan (free mode)\n\n`acknowledge_paid_aws=false` — 유료 리소스 없음\n\n';
+            try {
+              const txt = fs.readFileSync('terraform/plan.txt', 'utf8');
+              const lines = txt.trim().split('\n');
+              const tail = lines.slice(-40).join('\n');
+              body += '```text\n' + tail + '\n```\n';
+            } catch (e) {
+              body += '_plan.txt 없음_\n';
+            }
+            body += '\n_CI apply 없음. 유료 배포는 사용자 확인 후 로컬 스크립트만._';
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body
+            });
 
       - name: Skip notice
         if: steps.aws.outputs.configured != 'true'
-        run: echo "plan skipped (no AWS secrets)"
+        run: echo "plan skipped"

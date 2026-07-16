@@ -67,6 +67,35 @@
       </p>
 
       <section class="card">
+        <h2>무료 / 유료 모드 (중요)</h2>
+        <p class="layer">기본 = 무료</p>
+        <p>
+          <strong>무료 (평소):</strong>
+          <code>./scripts/dev-free.sh</code> — Docker Compose 만. AWS apply 안 함.
+        </p>
+        <p>
+          <strong>유료 (데모만):</strong> NAT / EKS / Bastion 등은
+          <code>acknowledge_paid_aws=true</code> +
+          <code>confirm_paid_apply=YES_I_ACCEPT_AWS_CHARGES</code> 와
+          <strong>본인 추가 확인</strong> 후에만.
+          스크립트: <code>./scripts/terraform-apply-paid.sh</code>
+        </p>
+        <p class="note">
+          AI/자동화는 사용자 승인 없이 유료 apply 하지 않습니다. 문서:
+          <a href="https://github.com/jinhgit/cloud-infra-cicd/blob/main/docs/FREE_MODE.md"
+            >FREE_MODE.md</a
+          >
+        </p>
+        <code class="cmd"># 무료 개발
+./scripts/dev-free.sh
+
+# 유료 데모 (동의 후)
+./scripts/terraform-apply-paid.sh
+# 끝나면
+./scripts/terraform-destroy-paid.sh</code>
+      </section>
+
+      <section class="card">
         <h2>A. 로컬 앱 (지금 이 브라우저)</h2>
         <p class="layer">Docker Compose · 비용 0</p>
         <ul class="check-list" id="local-checks">
@@ -145,9 +174,8 @@ terraform output bastion_public_ip</code>
 
       <section class="card">
         <h2>D. 실습 종료 (destroy)</h2>
-        <code class="cmd">cd terraform
-terraform destroy -auto-approve
-./scripts/verify-lab.sh   # state 비었는지 확인</code>
+        <code class="cmd">./scripts/terraform-destroy-paid.sh
+./scripts/verify-lab.sh</code>
         <ul class="check-list">
           <li>
             <input type="checkbox" id="c-destroy" />

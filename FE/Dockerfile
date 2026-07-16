@@ -1,4 +1,7 @@
-FROM nginx:1.27-alpine
+# syntax=docker/dockerfile:1
+# EKS 노드(x86) 호환: docker build --platform linux/amd64 -t cloud-infra-fe:local ./FE
+ARG TARGETPLATFORM=linux/amd64
+FROM --platform=$TARGETPLATFORM nginx:1.27-alpine
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY public/ /usr/share/nginx/html/

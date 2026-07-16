@@ -1,0 +1,52 @@
+# FE/BE 이미지 빌드 검증 (linux/amd64) — ECR 푸시 없음 (과금 없음)
+name: Docker Build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "FE/**"
+      - "BE/**"
+      - "scripts/build-images.sh"
+      - ".github/workflows/docker-build.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "FE/**"
+      - "BE/**"
+      - "scripts/build-images.sh"
+      - ".github/workflows/docker-build.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: build amd64 (no push)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build BE (linux/amd64)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./BE
+          platforms: linux/amd64
+          push: false
+          tags: cloud-infra-be:ci
+          build-args: |
+            GIT_SHA=${{ github.sha }}
+            APP_VERSION=0.1.0
+            TARGETPLATFORM=linux/amd64
+
+      - name: Build FE (linux/amd64)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./FE
+          platforms: linux/amd64
+          push: false
+          tags: cloud-infra-fe:ci
+          build-args: |
+            TARGETPLATFORM=linux/amd64

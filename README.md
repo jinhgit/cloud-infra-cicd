@@ -23,15 +23,31 @@
 
 ---
 
+## 현재 상태 · 데모 결과 (30초 요약)
+
+| 항목 | 상태 |
+|------|------|
+| **평소 개발** | 무료 — `./scripts/dev-free.sh` (Docker FE/BE) |
+| **유료 AWS** | 기본 OFF · 이중 확인 문구 없으면 apply 불가 |
+| **EKS E2E** | 실전 성공 이력 있음 (ALB `/` `/health` `/api/hello` = 200) → [DEMO_E2E_RESULT](docs/DEMO_E2E_RESULT.md) |
+| **인프라 현재** | destroy 후 비움 (과금 리소스 없음 권장 상태) |
+| **CI** | BE test · Docker amd64 빌드 · Compose 통합 · TF fmt/validate/plan · PR plan 코멘트 |
+
+**채용/발표 한 줄:**  
+Terraform 3-Tier + Bastion/SSM + EKS(ALB Ingress) + GitHub Actions를 구현했고, 평소는 로컬 무료 개발·유료 클라우드는 명시 동의 후에만 켠다.
+
+---
+
 ## 목차
 
-1. [한눈에 보는 아키텍처](#한눈에-보는-아키텍처)
-2. [데모 시나리오](#데모-시나리오)
-3. [빠른 시작](#빠른-시작)
-4. [디렉터리 구조](#디렉터리-구조)
-5. [진행 단계](#진행-단계)
-6. [프로젝트 문서](#프로젝트-문서)
-7. [보안·비용](#보안비용)
+1. [현재 상태 · 데모 결과](#현재-상태--데모-결과-30초-요약)
+2. [한눈에 보는 아키텍처](#한눈에-보는-아키텍처)
+3. [데모 시나리오](#데모-시나리오)
+4. [빠른 시작](#빠른-시작)
+5. [디렉터리 구조](#디렉터리-구조)
+6. [진행 단계](#진행-단계)
+7. [프로젝트 문서](#프로젝트-문서)
+8. [보안·비용](#보안비용)
 
 ---
 
@@ -310,8 +326,11 @@ flowchart TB
 ```bash
 ./scripts/dev-free.sh
 # 또는: docker compose up --build
-# http://localhost:8080
-# http://localhost:8080/lab.html
+# http://localhost:8080          — API · 버전/gitSha
+# http://localhost:8080/lab.html — 체크리스트 · 무료/유료 안내
+
+./scripts/integration-test.sh    # Compose curl 자동 검증
+./scripts/build-images.sh        # linux/amd64 로컬 빌드 (푸시 없음)
 ```
 
 ### Terraform (네트워크만, EKS 끔)
@@ -343,14 +362,15 @@ cd terraform && terraform fmt -check -recursive \
 
 ```
 cloud-infra-cicd/
-├── README.md                 # 본 문서 (다이어그램 · 데모)
-├── docker-compose.yml        # 로컬 FE+BE
-├── FE/                       # 프론트 (Nginx + 정적)
-├── BE/                       # 백엔드 (Express)
-├── k8s/                      # EKS 매니페스트 · Ingress
-├── terraform/                # VPC/NAT/SG + Bastion + 선택 EKS/ECR
-├── docs/                     # PRD · Bastion · E2E · CI
-└── .github/workflows/        # BE CI · Terraform CI
+├── README.md · AGENTS.md · CHANGELOG.md · CONTRIBUTING.md
+├── docker-compose.yml · scripts/
+│   ├── dev-free.sh · verify-lab.sh
+│   ├── build-images.sh · build-push-images.sh
+│   ├── render-k8s-images.sh · deploy-k8s.sh
+│   ├── integration-test.sh
+│   └── terraform-apply-paid.sh · terraform-destroy-paid.sh
+├── FE/ · BE/ · k8s/ · terraform/ · docs/
+└── .github/workflows/        # be · docker-build · integration · terraform
 ```
 
 ---
@@ -359,10 +379,11 @@ cloud-infra-cicd/
 
 | 단계 | 목표 | 상태 |
 |------|------|------|
-| 1 | Terraform 네트워크 (NAT 2 · RT 5 · SG) | ✅ 코드 완료 (필요 시 apply/destroy) |
-| 2 | Bastion (`enable_bastion`) SSH/SSM | ✅ 코드 완료 |
-| 3 | GitHub Actions fmt/validate/plan + BE test | ✅ 골격·시크릿 plan 검증 |
-| 4 | EKS + Ingress + ECR 데모 | 🟡 코드·체크리스트 준비, 당일 apply |
+| 1 | Terraform 네트워크 (NAT 2 · RT 5 · SG) | ✅ |
+| 2 | Bastion SSH/SSM | ✅ |
+| 3 | GitHub Actions (test/build/plan/PR 코멘트) | ✅ |
+| 4 | EKS + Ingress E2E (실전 성공 이력) | ✅ (재현 시 유료 동의) |
+| — | 무료 모드 가드 · 배포 스크립트 · 통합 테스트 | ✅ |
 
 상세: [docs/PRD.md](docs/PRD.md)
 
@@ -421,4 +442,4 @@ cloud-infra-cicd/
 ---
 
 **마지막 업데이트:** 2026-07-17  
-**버전:** v0.3.0 — README 아키텍처 다이어그램 · 데모 시나리오 A/B
+**버전:** v0.4.0 — P1/P2 스크립트·CI 고도화 · 무료 가드 · 데모 요약

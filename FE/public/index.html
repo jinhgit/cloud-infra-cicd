@@ -11,15 +11,21 @@
       <h1>Cloud Infra Demo</h1>
       <p class="subtitle">IaC · 3-Tier Network · EKS · CI/CD</p>
       <p class="meta">
-        <a href="/lab.html" style="color: var(--accent)">실습 확인 체크리스트 (lab.html) →</a>
+        <a href="/lab.html" style="color: var(--accent)">실습 확인 · 무료/유료 안내 →</a>
       </p>
       <p id="runtime-meta" class="meta"></p>
 
       <section class="card">
         <div class="card-head">
-          <h2>GET /health</h2>
+          <h2>Service info</h2>
           <button type="button" id="btn-refresh" class="btn">새로고침</button>
         </div>
+        <p id="info-status" class="status pending">checking…</p>
+        <pre id="info-body" class="code"></pre>
+      </section>
+
+      <section class="card">
+        <h2>GET /health</h2>
         <p id="health-status" class="status pending">checking…</p>
         <pre id="health-body" class="code"></pre>
       </section>
@@ -32,7 +38,7 @@
 
       <footer>
         <small>
-          FE (Nginx) · same-origin API · Docker Compose / EKS Ingress 대응
+          FE (Nginx) · same-origin API · 기본 무료 모드 (./scripts/dev-free.sh)
         </small>
       </footer>
     </main>

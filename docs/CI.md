@@ -1,66 +1,80 @@
 # GitHub Actions CI 가이드
 
-PRD Stage 3 최소 구현: **Terraform fmt/validate/plan** + **BE npm test**.
+## 워크플로 목록
 
-## 워크플로
+| 파일 | 하는 일 | 과금 |
+|------|---------|------|
+| `be-ci.yml` | `npm test` | 없음 |
+| `docker-build.yml` | FE/BE **linux/amd64 빌드만** (푸시 없음) | 없음 |
+| `integration.yml` | Compose 기동 후 curl | 없음 |
+| `terraform-ci.yml` | fmt/validate + plan + **PR 코멘트** | plan 시 AWS API 호출만 |
 
-| 파일 | 트리거 | 하는 일 |
-|------|--------|---------|
-| `.github/workflows/be-ci.yml` | `BE/**` 변경, PR/push | `npm ci` + `npm test` |
-| `.github/workflows/terraform-ci.yml` | `terraform/**` 변경, PR/push | `fmt -check` → `validate` → (선택) `plan` |
+**CI에서 terraform apply / ECR push 하지 않음.**
 
-### Terraform job 동작
+---
 
-1. **check (필수)**  
-   - AWS 자격 **불필요**  
-   - `terraform fmt -check`  
-   - `terraform init -backend=false`  
-   - `terraform validate`
+## AWS 인증 (plan)
 
-2. **plan (선택)**  
-   - Repository Secrets 에 AWS 키가 있을 때만 실행  
-   - 없으면 스킵 (workflow 실패 아님)  
-   - `enable_eks=false` 고정으로 비용·시간 최소화  
-   - plan 결과 아티팩트 업로드 (7일)
+### A) Access Key (현재 동작 가능)
 
-## 필수 설정 (plan 을 돌리려면)
+Secrets:
 
-GitHub 저장소 → **Settings → Secrets and variables → Actions → New repository secret**
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
 
-| Secret 이름 | 값 |
-|-------------|-----|
-| `AWS_ACCESS_KEY_ID` | IAM 사용자 Access Key |
-| `AWS_SECRET_ACCESS_KEY` | Secret Key |
+### B) OIDC (권장 — 장기 키 제거)
 
-### IAM 권한 (plan 최소)
+1. AWS IAM에서 GitHub OIDC provider 생성  
+   URL: `https://token.actions.githubusercontent.com`  
+   Audience: `sts.amazonaws.com`
 
-- 읽기 위주: `ViewOnlyAccess` 또는 커스텀 (EC2/VPC/EKS/IAM Describe 등)  
-- **apply 는 CI에서 기본 실행하지 않음** (실수 과금 방지)
+2. IAM Role 신뢰 정책 예 (저장소에 맞게 수정):
 
-리전: `ap-northeast-2`
-
-## 권장 개선 (이후)
-
-1. **OIDC + IAM Role** — 장기 키 제거 (`permissions: id-token: write`)  
-2. `terraform plan` 결과를 PR 코멘트로 게시  
-3. `main` 보호 브랜치 + Environment approval 후 apply  
-4. FE/BE 이미지 빌드 → ECR 푸시 (Stage 4 CD)
-
-## 로컬에서 CI와 동일하게 검사
-
-```bash
-# BE
-cd BE && npm ci && npm test
-
-# Terraform
-cd terraform
-terraform fmt -check -recursive
-terraform init -backend=false
-terraform validate
-# plan (로컬 자격 사용)
-terraform plan -var='my_ip=203.0.113.10/32' -var='enable_eks=false'
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Principal": {
+      "Federated": "arn:aws:iam::ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com"
+    },
+    "Action": "sts:AssumeRoleWithWebIdentity",
+    "Condition": {
+      "StringEquals": {
+        "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+      },
+      "StringLike": {
+        "token.actions.githubusercontent.com:sub": "repo:jinhgit/cloud-infra-cicd:*"
+      }
+    }
+  }]
+}
 ```
 
-## 수동 실행
+3. Role에 plan 용 읽기 권한 (예: `ViewOnlyAccess` 또는 최소 Describe)
 
-Actions 탭 → **Terraform CI** 또는 **BE CI** → **Run workflow**
+4. GitHub Secrets:
+   - `AWS_ROLE_ARN` = 위 Role ARN
+
+5. `.github/workflows/terraform-ci.yml` 의  
+   `permissions: id-token: write` 주석 해제
+
+워크플로는 `AWS_ROLE_ARN` 이 있으면 **OIDC 우선**, 없으면 Access Key, 둘 다 없으면 plan 스킵.
+
+---
+
+## PR plan 코멘트
+
+PR 에서 terraform 변경 + AWS 자격 있으면  
+plan 마지막 약 40줄이 PR 코멘트로 올라갑니다 (free mode 고정).
+
+---
+
+## 로컬 동일 검사
+
+```bash
+cd BE && npm ci && npm test
+./scripts/integration-test.sh
+./scripts/build-images.sh
+cd terraform && terraform fmt -check -recursive && terraform init -backend=false && terraform validate
+```
