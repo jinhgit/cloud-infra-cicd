@@ -190,7 +190,7 @@ variable "bastion_key_name" {
 }
 
 variable "bastion_volume_size" {
-  description = "Bastion 루트 볼륨 GiB"
+  description = "Bastion 루트 볼륨 GiB (AL2023 AMI 스냅샷 최소 약 30GiB)"
   type        = number
-  default     = 8
+  default     = 30
 }

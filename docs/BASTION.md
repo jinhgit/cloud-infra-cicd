@@ -8,6 +8,7 @@ Public 서브넷에 점프 서버를 두고, **개발자 IP(`my_ip`)에서만 SS
 | 배치 | Public 서브넷 AZ-A (`aws_subnet.public[0]`) |
 | AMI | Amazon Linux 2023 (x86_64) |
 | 기본 타입 | `t3.micro` |
+| 루트 볼륨 | **30 GiB** gp3 (AL2023 AMI 최소 크기) |
 | SG | 기존 `aws_security_group.bastion` (22 ← `my_ip`) |
 | 추가 | SSM IAM (`AmazonSSMManagedInstanceCore`), Web SG에 Bastion→22 규칙 |
 
