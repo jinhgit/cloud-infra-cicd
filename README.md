@@ -24,10 +24,11 @@
 | [1단계 개발 가이드](docs/STAGE_1_DEV_GUIDE.md) | Stage 1 구현 절차·체크리스트·트러블슈팅 |
 | [Stage 1 Apply 런북](docs/STAGE_1_APPLY.md) | plan/apply/destroy 실무 절차 |
 | [EKS 설계](docs/EKS_DESIGN.md) | EKS·IRSA·ECR·삭제 순서 |
+| [EKS E2E 체크리스트](docs/EKS_E2E_CHECKLIST.md) | 데모 당일 명령 순서·비용 destroy |
 | [k8s 매니페스트](k8s/README.md) | FE/BE Ingress 배포 가이드 |
 | [CI 가이드](docs/CI.md) | GitHub Actions (Terraform / BE) |
 
-**읽는 순서 권장:** PRD → 기능 명세서 → 아키텍처 → Stage 1 Apply → CI → EKS 설계 → k8s
+**읽는 순서 권장:** PRD → 기능 명세서 → CI → Stage 1 Apply → EKS 설계 → **E2E 체크리스트** → k8s
 
 ## 🏗️ 시스템 아키텍처
 

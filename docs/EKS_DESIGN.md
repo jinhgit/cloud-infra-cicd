@@ -36,6 +36,8 @@ Internet → ALB (Public) → AWS LB Controller Ingress
 5. ECR 푸시 → `k8s/` 매니페스트 이미지 교체 → apply
 6. Ingress ALB DNS 확인
 
+**명령 전체·체크박스·소요시간:** [EKS_E2E_CHECKLIST.md](EKS_E2E_CHECKLIST.md)
+
 ## Destroy 순서
 
 1. Ingress/앱 매니페스트 삭제 (ALB 정리)

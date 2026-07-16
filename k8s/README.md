@@ -6,6 +6,9 @@ PRD 권장 A 경로:
 Internet → ALB (AWS Load Balancer Controller) → Ingress → Service → Pod
 ```
 
+**데모 당일 전체 순서(인프라→ECR→배포→destroy):**  
+→ [docs/EKS_E2E_CHECKLIST.md](../docs/EKS_E2E_CHECKLIST.md)
+
 ## 디렉터리
 
 ```
