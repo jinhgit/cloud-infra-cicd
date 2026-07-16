@@ -1,46 +1,56 @@
 # ===================================================
-# Public 서브넷 생성 (ALB, Bastion 호스트용)
+# Public 서브넷 (ALB, Bastion, NAT)
+# EKS: kubernetes.io/role/elb 태그로 외부 ALB 배치
 # ===================================================
 
 resource "aws_subnet" "public" {
-  count                   = 2
+  count                   = local.az_count
   vpc_id                  = aws_vpc.main.id
   cidr_block              = var.public_subnet_cidrs[count.index]
   availability_zone       = local.availability_zones[count.index]
   map_public_ip_on_launch = true
 
-  tags = {
-    Name = "${local.name_prefix}-public-subnet-${local.availability_zones[count.index]}"
-    Type = "Public"
-  }
-
-  depends_on = [aws_vpc.main]
+  tags = merge(
+    {
+      Name                     = "${local.name_prefix}-public-subnet-${local.availability_zones[count.index]}"
+      Type                     = "Public"
+      "kubernetes.io/role/elb" = "1"
+    },
+    # 클러스터 이름 태그는 enable_eks 여부와 관계없이 예약 이름으로 부여 (Controller 탐색용)
+    {
+      (local.eks_cluster_tag_key) = "shared"
+    }
+  )
 }
 
 # ===================================================
-# Private Web 서브넷 생성 (웹 서버/EC2용)
+# Private Web 서브넷 (EKS 워커 노드 / 웹)
 # ===================================================
 
 resource "aws_subnet" "private_web" {
-  count             = 2
+  count             = local.az_count
   vpc_id            = aws_vpc.main.id
   cidr_block        = var.private_web_subnet_cidrs[count.index]
   availability_zone = local.availability_zones[count.index]
 
-  tags = {
-    Name = "${local.name_prefix}-private-web-subnet-${local.availability_zones[count.index]}"
-    Type = "Private-Web"
-  }
-
-  depends_on = [aws_vpc.main]
+  tags = merge(
+    {
+      Name                              = "${local.name_prefix}-private-web-subnet-${local.availability_zones[count.index]}"
+      Type                              = "Private-Web"
+      "kubernetes.io/role/internal-elb" = "1"
+    },
+    {
+      (local.eks_cluster_tag_key) = "shared"
+    }
+  )
 }
 
 # ===================================================
-# Private DB 서브넷 생성 (데이터베이스용)
+# Private DB 서브넷 (RDS 배치 공간)
 # ===================================================
 
 resource "aws_subnet" "private_db" {
-  count             = 2
+  count             = local.az_count
   vpc_id            = aws_vpc.main.id
   cidr_block        = var.private_db_subnet_cidrs[count.index]
   availability_zone = local.availability_zones[count.index]
@@ -49,6 +59,4 @@ resource "aws_subnet" "private_db" {
     Name = "${local.name_prefix}-private-db-subnet-${local.availability_zones[count.index]}"
     Type = "Private-DB"
   }
-
-  depends_on = [aws_vpc.main]
 }

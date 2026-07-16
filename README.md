@@ -22,8 +22,11 @@
 | [아키텍처](docs/architecture.md) | 3-Tier 네트워크·SG·라우팅·트래픽 흐름 상세 |
 | [프로젝트 구조](docs/PROJECT_STRUCTURE.md) | Terraform 파일별 역할 및 완성 상태 |
 | [1단계 개발 가이드](docs/STAGE_1_DEV_GUIDE.md) | Stage 1 구현 절차·체크리스트·트러블슈팅 |
+| [Stage 1 Apply 런북](docs/STAGE_1_APPLY.md) | plan/apply/destroy 실무 절차 |
+| [EKS 설계](docs/EKS_DESIGN.md) | EKS·IRSA·ECR·삭제 순서 |
+| [k8s 매니페스트](k8s/README.md) | FE/BE Ingress 배포 가이드 |
 
-**읽는 순서 권장:** PRD → 기능 명세서 → 아키텍처 → (구현 시) 1단계 개발 가이드
+**읽는 순서 권장:** PRD → 기능 명세서 → 아키텍처 → Stage 1 Apply → EKS 설계 → k8s
 
 ## 🏗️ 시스템 아키텍처
 
@@ -116,7 +119,11 @@ cicd/
 │   ├── tests/
 │   ├── package.json
 │   └── Dockerfile
-├── terraform/                         # Terraform 코드 (Stage 1 네트워크)
+├── k8s/                               # EKS 매니페스트 (FE/BE/Ingress)
+│   ├── namespace.yaml
+│   ├── fe/ be/ ingress/
+│   └── aws-load-balancer-controller/
+├── terraform/                         # Terraform (Stage 1 네트워크 + 선택 EKS)
 │   ├── main.tf
 │   ├── variables.tf
 │   ├── outputs.tf
@@ -128,7 +135,9 @@ cicd/
 │   ├── FUNCTIONAL_SPEC.md             # 기능 명세서
 │   ├── architecture.md
 │   ├── PROJECT_STRUCTURE.md
-│   └── STAGE_1_DEV_GUIDE.md
+│   ├── STAGE_1_DEV_GUIDE.md
+│   ├── STAGE_1_APPLY.md               # Stage 1 apply 런북
+│   └── EKS_DESIGN.md                  # EKS 설계
 └── .github/
     └── workflows/                     # GitHub Actions (예정)
 ```

@@ -47,8 +47,6 @@ resource "aws_vpc_security_group_ingress_rule" "alb_https" {
 resource "aws_vpc_security_group_egress_rule" "alb_all" {
   security_group_id = aws_security_group.alb.id
   description       = "Allow all outbound traffic"
-  from_port         = -1
-  to_port           = -1
   ip_protocol       = "-1"
   cidr_ipv4         = "0.0.0.0/0"
 
@@ -106,8 +104,6 @@ resource "aws_vpc_security_group_ingress_rule" "web_ec2_https_from_alb" {
 resource "aws_vpc_security_group_egress_rule" "web_ec2_all" {
   security_group_id = aws_security_group.web_ec2.id
   description       = "Allow all outbound traffic"
-  from_port         = -1
-  to_port           = -1
   ip_protocol       = "-1"
   cidr_ipv4         = "0.0.0.0/0"
 
@@ -151,8 +147,6 @@ resource "aws_vpc_security_group_ingress_rule" "bastion_ssh" {
 resource "aws_vpc_security_group_egress_rule" "bastion_all" {
   security_group_id = aws_security_group.bastion.id
   description       = "Allow all outbound traffic"
-  from_port         = -1
-  to_port           = -1
   ip_protocol       = "-1"
   cidr_ipv4         = "0.0.0.0/0"
 
@@ -210,8 +204,6 @@ resource "aws_vpc_security_group_ingress_rule" "db_postgresql" {
 resource "aws_vpc_security_group_egress_rule" "db_all" {
   security_group_id = aws_security_group.db.id
   description       = "Allow all outbound traffic"
-  from_port         = -1
-  to_port           = -1
   ip_protocol       = "-1"
   cidr_ipv4         = "0.0.0.0/0"
 

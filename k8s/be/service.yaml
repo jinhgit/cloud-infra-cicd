@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: be
+  namespace: cloud-infra
+  labels:
+    app: be
+spec:
+  type: ClusterIP
+  selector:
+    app: be
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

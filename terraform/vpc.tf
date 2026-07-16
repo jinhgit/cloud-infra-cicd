@@ -22,14 +22,4 @@ resource "aws_internet_gateway" "main" {
   tags = {
     Name = "${local.name_prefix}-igw"
   }
-
-  depends_on = [aws_vpc.main]
-}
-
-# ===================================================
-# 가용영역 데이터 소스
-# ===================================================
-
-data "aws_availability_zones" "available" {
-  state = "available"
 }

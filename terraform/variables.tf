@@ -54,10 +54,6 @@ variable "vpc_cidr" {
   }
 }
 
-# ===================================================
-# 서브넷 CIDR 변수 (가용영역별)
-# ===================================================
-
 variable "public_subnet_cidrs" {
   description = "Public 서브넷 CIDR 블록 (AZ-A, AZ-C)"
   type        = list(string)
@@ -70,7 +66,7 @@ variable "public_subnet_cidrs" {
 }
 
 variable "private_web_subnet_cidrs" {
-  description = "Private Web 서브넷 CIDR 블록 (AZ-A, AZ-C)"
+  description = "Private Web 서브넷 CIDR (EKS 노드 / 웹)"
   type        = list(string)
   default     = ["10.0.10.0/24", "10.0.11.0/24"]
 
@@ -81,7 +77,7 @@ variable "private_web_subnet_cidrs" {
 }
 
 variable "private_db_subnet_cidrs" {
-  description = "Private DB 서브넷 CIDR 블록 (AZ-A, AZ-C)"
+  description = "Private DB 서브넷 CIDR"
   type        = list(string)
   default     = ["10.0.20.0/24", "10.0.21.0/24"]
 
@@ -96,7 +92,7 @@ variable "private_db_subnet_cidrs" {
 # ===================================================
 
 variable "my_ip" {
-  description = "Bastion Host SSH 접속을 허용할 개발자 공인 IP (예: 203.0.113.42/32)"
+  description = "Bastion/EKS API 공개 접근 허용 개발자 공인 IP (예: 203.0.113.42/32)"
   type        = string
 
   validation {
@@ -105,15 +101,68 @@ variable "my_ip" {
   }
 }
 
-# ===================================================
-# 태그 변수
-# ===================================================
-
 variable "tags" {
   description = "모든 리소스에 적용할 추가 태그"
   type        = map(string)
   default = {
-    ManagedBy = "Terraform"
-    Project   = "CloudInfra"
+    Application = "CloudInfra"
   }
+}
+
+# ===================================================
+# EKS / ECR (Stage 4) — 기본 비활성 (비용 통제)
+# ===================================================
+
+variable "enable_eks" {
+  description = "true 시 EKS 클러스터·노드·OIDC·LB Controller IRSA 생성 (과금 주의)"
+  type        = bool
+  default     = false
+}
+
+variable "enable_ecr" {
+  description = "true 시 FE/BE ECR 리포지토리 생성 (enable_eks와 독립 가능)"
+  type        = bool
+  default     = false
+}
+
+variable "eks_cluster_version" {
+  description = "EKS Kubernetes 버전"
+  type        = string
+  default     = "1.29"
+}
+
+variable "eks_node_instance_type" {
+  description = "관리형 노드 인스턴스 타입"
+  type        = string
+  default     = "t3.medium"
+}
+
+variable "eks_node_desired_size" {
+  description = "노드 desired capacity"
+  type        = number
+  default     = 2
+}
+
+variable "eks_node_min_size" {
+  description = "노드 min capacity"
+  type        = number
+  default     = 2
+}
+
+variable "eks_node_max_size" {
+  description = "노드 max capacity"
+  type        = number
+  default     = 4
+}
+
+variable "eks_endpoint_public_access" {
+  description = "EKS API 퍼블릭 엔드포인트 사용 여부"
+  type        = bool
+  default     = true
+}
+
+variable "eks_public_access_cidrs" {
+  description = "EKS API 퍼블릭 접근 CIDR (비우면 my_ip 사용)"
+  type        = list(string)
+  default     = []
 }

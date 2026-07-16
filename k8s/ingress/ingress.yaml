@@ -1,0 +1,41 @@
+# AWS Load Balancer Controller 가 ALB 를 생성합니다.
+# group.name 으로 FE/BE 를 하나의 ALB 에 묶습니다.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cloud-infra
+  namespace: cloud-infra
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    alb.ingress.kubernetes.io/healthcheck-path: /healthz
+    alb.ingress.kubernetes.io/group.name: cloud-infra
+    # BE 경로 health 는 /health — 경로별 헬스 제한이 있으면 컨트롤러 버전 문서 참고
+spec:
+  ingressClassName: alb
+  rules:
+    - http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: be
+                port:
+                  number: 80
+          - path: /health
+            pathType: Exact
+            backend:
+              service:
+                name: be
+                port:
+                  number: 80
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: fe
+                port:
+                  number: 80
