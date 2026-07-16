@@ -105,14 +105,19 @@ arn:aws:iam::447170313588:oidc-provider/token.actions.githubusercontent.com
 > **중요 (2024+ GitHub sub 형식)**  
 > 일부 저장소/조직은 `sub` 에 **owner·repo 숫자 ID** 를 넣습니다.  
 > CloudTrail 예: `repo:jinhgit@267884150/cloud-infra-cicd@1302872585:ref:refs/heads/main`  
-> 구형 `repo:jinhgit/cloud-infra-cicd:*` 만 두면 **AccessDenied** 가 납니다.  
-> 아래처럼 **구형 + ID 포함형** 둘 다 허용하세요.
+> 구형 `repo:jinhgit/cloud-infra-cicd:*` 만 두면 **AccessDenied** 가 납니다.
+
+### 현재 운영 trust (main 전용 · 적용 완료)
+
+`terraform-ci` 의 plan job 도 **main push / workflow_dispatch** 만 OIDC plan 을 돌립니다.  
+PR 은 `fmt` / `validate` 만.
 
 ```json
 {
   "Version": "2012-10-17",
   "Statement": [
     {
+      "Sid": "GitHubActionsMainOnly",
       "Effect": "Allow",
       "Principal": {
         "Federated": "arn:aws:iam::447170313588:oidc-provider/token.actions.githubusercontent.com"
@@ -124,8 +129,8 @@ arn:aws:iam::447170313588:oidc-provider/token.actions.githubusercontent.com
         },
         "StringLike": {
           "token.actions.githubusercontent.com:sub": [
-            "repo:jinhgit/cloud-infra-cicd:*",
-            "repo:jinhgit@*/cloud-infra-cicd@*:*"
+            "repo:jinhgit/cloud-infra-cicd:ref:refs/heads/main",
+            "repo:jinhgit@*/cloud-infra-cicd@*:ref:refs/heads/main"
           ]
         }
       }
@@ -134,9 +139,8 @@ arn:aws:iam::447170313588:oidc-provider/token.actions.githubusercontent.com
 }
 ```
 
-- 실제 `sub` 확인: CloudTrail `AssumeRoleWithWebIdentity` 이벤트의 `userName` / `principalId`.  
-- main 만 허용하려면 `...:ref:refs/heads/main` 으로 좁히기.  
-- PR plan 은 `...:*` (위 예시) 권장.
+- 실제 `sub` 확인: CloudTrail `AssumeRoleWithWebIdentity` 의 `userName` / `principalId`.  
+- PR plan 이 필요하면 `...:pull_request` 패턴을 추가하고 workflow `if` 를 완화.
 
 ### 3-2. Role 생성
 
@@ -230,38 +234,44 @@ gh run list --workflow="Terraform CI" --limit 3
 
 ---
 
-## 7. 장기 키 제거 (OIDC 성공 후)
+## 7. 장기 키 제거 (OIDC 성공 후) — **완료**
 
-1. Actions plan 이 OIDC 로 2~3회 성공 확인  
-2. GitHub Secrets 에서 `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` 삭제  
-3. IAM 사용자 Access Key 비활성/삭제 (콘솔 전용 키와 구분)  
-4. README/CI 문서에 “OIDC 사용 중” 메모 (선택)
+| 항목 | 상태 |
+|------|------|
+| OIDC plan 성공 (main) | ✅ |
+| GitHub `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` 삭제 | ✅ |
+| Secret `AWS_ROLE_ARN` 만 유지 | ✅ |
+| trust main-only | ✅ |
+| IAM 사용자(JHM) 로컬 CLI Access Key | **유지** (로컬 Terraform/IAM 관리용 · CI 아님) |
+
+> CI 용 장기 키는 **GitHub Secrets 에서 제거**한 것이 핵심입니다.  
+> 콘솔/로컬 AWS CLI 키는 별도 수명 주기로 관리합니다.
 
 ---
 
 ## 8. 보안 체크리스트
 
-- [ ] OIDC Provider 1개 (계정당 공유 가능)  
-- [ ] Role trust 가 **이 저장소만** 허용  
-- [ ] Role 이 **plan/읽기** 위주 (AdministratorAccess 금지)  
-- [ ] `id-token: write` 설정  
-- [ ] `AWS_ROLE_ARN` Secret 등록  
-- [ ] 성공 후 장기 키 삭제  
-- [ ] apply 는 여전히 CI에 없음 + 유료는 `confirm_paid_apply` 가드  
+- [x] OIDC Provider 1개 (계정당 공유 가능)  
+- [x] Role trust 가 **이 저장소 main** 만 허용  
+- [x] Role 이 **plan/읽기** 위주 (`ReadOnlyAccess`)  
+- [x] `id-token: write` 설정  
+- [x] `AWS_ROLE_ARN` Secret 등록  
+- [x] GitHub 장기 키 Secret 삭제  
+- [x] apply 는 CI에 없음 + 유료는 `confirm_paid_apply` 가드  
 
 ---
 
 ## 9. 노션에 옮길 때 요약 블록
 
 ```text
-제목: GitHub OIDC → AWS plan Role
+제목: GitHub OIDC → AWS plan Role (적용 완료)
 계정: 447170313588
 Role: gha-cloud-infra-cicd-plan
-Repo: jinhgit/cloud-infra-cicd
-Secret: AWS_ROLE_ARN
-권한: ReadOnlyAccess (추후 축소)
+Repo: jinhgit/cloud-infra-cicd (main only)
+Secret: AWS_ROLE_ARN only
+권한: ReadOnlyAccess
 검증: Terraform CI plan job 초록
-다음: Access Key Secret 삭제
+완료: Access Key Secret 삭제 · main-only trust
 ```
 
 ---

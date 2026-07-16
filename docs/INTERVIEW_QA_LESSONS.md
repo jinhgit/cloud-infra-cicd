@@ -83,9 +83,13 @@
 
 **A.** 학습 단계에서는 로컬 state, `.gitignore`로 커밋 금지. 팀/CI apply 시 S3+DynamoDB lock을 다음 단계로 문서화해 두었습니다.
 
-### Q14. 보안에서 더 하고 싶은 것은?
+### Q14. CI 인증은 Access Key인가요, OIDC인가요?
 
-**A.** GitHub OIDC로 plan 키 제거, 앱 단위 IRSA, 이미지 스캔, NetworkPolicy, remote state 암호화 등을 로드맵으로 두고 있습니다. (OIDC 가이드: `docs/OIDC_SETUP.md`)
+**A.** **OIDC로 전환 완료**했습니다. GitHub Secret 은 `AWS_ROLE_ARN` 만 두고 장기 Access Key Secret 은 삭제했습니다. Role trust 는 **main 브랜치**로 좁혔고, plan only(ReadOnly)입니다. 적용 중 `sub` 이 `repo:owner@id/repo@id:ref:...` 형태여 CloudTrail로 확인·trust 를 고친 경험이 있습니다. (`docs/OIDC_SETUP.md`)
+
+### Q14-b. 보안에서 더 하고 싶은 것은?
+
+**A.** 앱 단위 IRSA 확대, 이미지 스캔, NetworkPolicy, remote state 암호화 등을 다음 학습 후보로 둡니다.
 
 ### Q15. 장애가 나면 어디부터 보나요?
 
@@ -116,10 +120,11 @@
 | ImagePullBackOff | arm64 이미지 | linux/amd64 |
 | Ingress ALB 실패 | Controller IAM 구버전 | 정책 v2.13 |
 | Bastion 볼륨 | AMI 최소 30GiB | volume 30 |
+| OIDC AccessDenied | `sub` 에 owner/repo **숫자 ID** | CloudTrail 확인 후 StringLike 병기 → main-only 로 재축소 |
 
-### 다음에 개선할 것
+### 다음에 개선할 것 (선택 학습 · 프로젝트 마감 이후)
 
-1. OIDC로 CI Access Key 제거 (가이드 작성 완료 → 계정 적용)  
+1. ~~OIDC로 CI Access Key 제거~~ ✅ 완료  
 2. Remote state (S3+DynamoDB)  
 3. 관측 (로그/메트릭 최소)  
 4. 앱 IRSA 예시  

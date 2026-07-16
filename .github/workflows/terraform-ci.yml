@@ -64,10 +64,10 @@ jobs:
     defaults:
       run:
         working-directory: terraform
+    # OIDC trust = main 브랜치만 (docs/OIDC_SETUP.md). PR 은 check(fmt/validate) 만.
     if: >
       github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'push' ||
-      github.event.pull_request.head.repo.full_name == github.repository
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3

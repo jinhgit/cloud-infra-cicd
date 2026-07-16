@@ -4,9 +4,22 @@
 [![Docker Build](https://github.com/jinhgit/cloud-infra-cicd/actions/workflows/docker-build.yml/badge.svg)](https://github.com/jinhgit/cloud-infra-cicd/actions/workflows/docker-build.yml)
 [![Integration](https://github.com/jinhgit/cloud-infra-cicd/actions/workflows/integration.yml/badge.svg)](https://github.com/jinhgit/cloud-infra-cicd/actions/workflows/integration.yml)
 [![Terraform CI](https://github.com/jinhgit/cloud-infra-cicd/actions/workflows/terraform-ci.yml/badge.svg)](https://github.com/jinhgit/cloud-infra-cicd/actions/workflows/terraform-ci.yml)
+[![CI Auth](https://img.shields.io/badge/CI_Auth-OIDC-0A7B3E?logo=amazon-aws&logoColor=white)](docs/OIDC_SETUP.md)
+[![Cost](https://img.shields.io/badge/Default-Free_mode-2ea44f)](docs/FREE_MODE.md)
+[![Infra](https://img.shields.io/badge/AWS_infra-destroyed-6c757d)](docs/DEMO_E2E_RESULT.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Terraform**으로 3-Tier 보안 네트워크를 코드화하고, **Amazon EKS** 위에 FE/BE를 올려 **ALB Ingress**로 서비스하며, **GitHub Actions**로 검증 파이프라인을 돌리는 포트폴리오 프로젝트입니다.
+**Terraform**으로 3-Tier 보안 네트워크를 코드화하고, **Amazon EKS** 위에 FE/BE를 올려 **ALB Ingress**로 서비스하며, **GitHub Actions(OIDC plan)** 로 검증하는 포트폴리오 프로젝트입니다.
+
+### 3줄 요약 (문제 → 설계 → 결과)
+
+| | |
+|--|--|
+| **문제** | 콘솔 수동 인프라는 재현이 어렵고, CI 장기 Access Key·상시 NAT/EKS는 보안·비용 리스크가 크다. |
+| **설계** | Terraform 2-AZ 3-Tier · Bastion/SSM · EKS(ALB Ingress) · 평소 Docker 무료 · 유료 이중 확인 apply·destroy · CI는 **GitHub OIDC** plan Role. |
+| **결과** | ALB `/` `/health` `/api/*` **HTTP 200 E2E** 후 **destroy**. Access Key Secret 제거 · **OIDC main-only trust** plan 성공 · 자동화 apply 차단. |
+
+📄 [이력서 1p](docs/RESUME_ONE_PAGER.md) · 📓 [노션 가이드](docs/NOTION_GUIDE.md) · 🎬 [데모 시각자료](docs/demo/README.md) · 🔐 [OIDC](docs/OIDC_SETUP.md)
 
 > ### 💰 기본은 무료 모드 · 유료는 **본인 확인 필수**
 >
@@ -23,43 +36,50 @@
 | 리전 | `ap-northeast-2` (서울) |
 | IaC | Terraform ≥ 1.5 |
 | 앱 | `FE/` (Nginx 정적) · `BE/` (Node.js Express) |
-| 오케스트레이션 | Amazon EKS (선택 활성화) |
-| CI | GitHub Actions (`fmt` / `validate` / `plan` · BE test) |
+| 오케스트레이션 | Amazon EKS (선택 활성화 · 현재 destroy) |
+| CI | GitHub Actions — test / docker / integration / **TF plan via OIDC** |
+| 인증 | Secret `AWS_ROLE_ARN` only (장기 키 Secret 없음) |
 | 저장소 | [github.com/jinhgit/cloud-infra-cicd](https://github.com/jinhgit/cloud-infra-cicd) |
 
 ---
 
-## 현재 상태 · 데모 결과 (30초 요약)
+## 현재 상태 · 데모 (한눈에)
 
 | 항목 | 상태 |
 |------|------|
-| **평소 개발** | 무료 — `./scripts/dev-free.sh` (Docker FE/BE) |
-| **유료 AWS** | 기본 OFF · 이중 확인 문구 없으면 apply 불가 |
-| **EKS E2E** | 실전 성공 이력 있음 (ALB `/` `/health` `/api/hello` = 200) → [DEMO_E2E_RESULT](docs/DEMO_E2E_RESULT.md) |
-| **인프라 현재** | destroy 후 비움 (과금 리소스 없음 권장 상태) |
-| **CI** | BE test · Docker amd64 빌드 · Compose 통합 · TF fmt/validate/plan · PR plan 코멘트 |
+| **평소 개발** | 무료 — `./scripts/dev-free.sh` → http://localhost:8080 |
+| **유료 AWS** | 기본 OFF · 이중 확인 없으면 apply 불가 |
+| **EKS E2E** | 실전 성공 (ALB 200) → [DEMO_E2E_RESULT](docs/DEMO_E2E_RESULT.md) → **destroy** |
+| **인프라 현재** | 비움 (과금 리소스 없음) |
+| **CI Auth** | **OIDC** plan Role · main 브랜치 only · Access Key Secret 삭제 |
+| **CI 잡** | BE test · Docker amd64 · Compose 통합 · TF fmt/validate/**plan** |
 
-**채용/발표 한 줄:**  
-Terraform 3-Tier + Bastion/SSM + EKS(ALB Ingress) + GitHub Actions를 구현했고, 평소는 로컬 무료 개발·유료 클라우드는 명시 동의 후에만 켠다.
+### 시각 자료 (표지 추천 순서 · [전체 설명](docs/demo/README.md))
 
-### 데모 스크린샷 (클릭 · [전체 세트](docs/demo/README.md))
+| Free / CI / Paid 한 장 | OIDC plan 흐름 |
+|------------------------|----------------|
+| ![modes](docs/demo/screenshots/06-modes-overview.jpg) | ![oidc](docs/demo/screenshots/05-oidc-flow.jpg) |
+
+| 트래픽 경로 (ALB→Pods) | EKS E2E curl 200 |
+|------------------------|------------------|
+| ![arch](docs/demo/screenshots/04-architecture-path.jpg) | ![E2E](docs/demo/screenshots/03-eks-e2e-terminal.png) |
 
 | 로컬 UI (과금 0) | lab · 무료/유료 안내 |
 |------------------|----------------------|
 | ![로컬 홈](docs/demo/screenshots/01-local-home.png) | ![lab](docs/demo/screenshots/02-local-lab.png) |
 
-| EKS E2E curl 200 | 트래픽 경로 |
-|------------------|------------|
-| ![E2E](docs/demo/screenshots/03-eks-e2e-terminal.png) | ![아키텍처](docs/demo/screenshots/04-architecture-path.jpg) |
-
-> 영상 대용: 위 슬라이드 4장 + [docs/demo/README.md](docs/demo/README.md) 발표 스크립트.  
-> 라이브: `./scripts/dev-free.sh` → http://localhost:8080
+| 자료 | 링크 |
+|------|------|
+| 데모 세트 · 60초 스크립트 | [docs/demo/README.md](docs/demo/README.md) |
+| 이력서 3줄 · 성과 불릿 | [docs/RESUME_ONE_PAGER.md](docs/RESUME_ONE_PAGER.md) |
+| 노션 복붙 | [docs/NOTION_GUIDE.md](docs/NOTION_GUIDE.md) |
+| 로컬 지금 바로 | `./scripts/dev-free.sh` → http://localhost:8080 |
 
 ---
 
 ## 목차
 
-1. [현재 상태 · 데모 결과](#현재-상태--데모-결과-30초-요약)
+1. [현재 상태 · 데모](#현재-상태--데모-한눈에)
 2. [한눈에 보는 아키텍처](#한눈에-보는-아키텍처)
 3. [데모 시나리오](#데모-시나리오)
 4. [빠른 시작](#빠른-시작)
@@ -188,7 +208,7 @@ flowchart LR
   subgraph Actions["GitHub Actions"]
     BECI["BE CI\nnpm test"]
     TFCheck["Terraform CI\nfmt + validate"]
-    TFPlan["terraform plan\n(시크릿 있을 때)"]
+    TFPlan["terraform plan\nOIDC · main only"]
   end
   subgraph Manual["수동 · 데모 당일"]
     Apply["terraform apply\nenable_eks=true"]
@@ -438,7 +458,7 @@ cloud-infra-cicd/
 
 - `terraform.tfvars` / `*.tfstate` / `.env` → Git 제외  
 - Bastion·EKS API: `my_ip` 제한 권장  
-- CI: Secrets 또는 **OIDC** ([docs/CI.md](docs/CI.md))  
+- CI: **GitHub OIDC** → IAM plan Role (main only) · Access Key Secret 없음 ([OIDC_SETUP](docs/OIDC_SETUP.md) · [CI](docs/CI.md))  
 - 최소 권한 SG (ALB → 워크로드, DB → Web SG만)
 
 ### 비용
@@ -448,7 +468,7 @@ cloud-infra-cicd/
 | NAT ×2 | 상시 과금 |
 | EKS 컨트롤 플레인 | **클러스터 유지 시간** 과금 (노드 0이어도) |
 | 노드 EC2 · ALB | 데모 중 과금 |
-| **대응** | 데모 후 **즉시 destroy** + 잔존 ALB/NAT 점검 |
+| **대응** | 데모 후 **즉시 destroy** + 잔존 ALB/NAT 점검 · 평소는 free mode |
 
 ---
 
@@ -458,11 +478,23 @@ cloud-infra-cicd/
 - Terraform IaC · plan/apply/destroy 수명주기  
 - EKS · IRSA · ALB Ingress  
 - 컨테이너 FE/BE · ECR  
-- GitHub Actions CI  
+- GitHub Actions CI + **OIDC**  
+- 비용 가드 · destroy 운영  
+
+## 포트폴리오 마감 체크
+
+| 항목 | 상태 |
+|------|------|
+| 3줄 요약 (문제→설계→결과) | [RESUME_ONE_PAGER](docs/RESUME_ONE_PAGER.md) · [NOTION_GUIDE](docs/NOTION_GUIDE.md) |
+| README 배지 + 데모 시각 6장 | 본 문서 상단 · [demo](docs/demo/README.md) |
+| OIDC plan · Access Key Secret 삭제 | 완료 |
+| OIDC trust main-only | 완료 |
+| 인프라 destroy | 완료 (재데모 시 paid 스크립트) |
+| 로컬 CLI IAM Access Key (JHM) | 유지 (로컬 작업용 · CI 아님) |
 
 ## 참고 링크
 
-- [Terraform](https://www.terraform.io/docs) · [AWS VPC](https://docs.aws.amazon.com/vpc/) · [EKS](https://docs.aws.amazon.com/eks/) · [GitHub Actions](https://docs.github.com/actions)
+- [Terraform](https://www.terraform.io/docs) · [AWS VPC](https://docs.aws.amazon.com/vpc/) · [EKS](https://docs.aws.amazon.com/eks/) · [GitHub Actions](https://docs.github.com/actions) · [GitHub OIDC](https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect)
 
 ---
 

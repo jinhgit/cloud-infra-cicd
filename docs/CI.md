@@ -7,66 +7,42 @@
 | `be-ci.yml` | `npm test` | 없음 |
 | `docker-build.yml` | FE/BE **linux/amd64 빌드만** (푸시 없음) | 없음 |
 | `integration.yml` | Compose 기동 후 curl | 없음 |
-| `terraform-ci.yml` | fmt/validate + plan + **PR 코멘트** | plan 시 AWS API 호출만 |
+| `terraform-ci.yml` | fmt/validate + **OIDC plan (main)** | plan 시 AWS API 호출만 |
 
 **CI에서 terraform apply / ECR push 하지 않음.**
 
 ---
 
-## AWS 인증 (plan)
+## AWS 인증 (plan) — **현재: OIDC**
 
-### A) Access Key (현재 동작 가능)
+| 방식 | 상태 |
+|------|------|
+| **B) OIDC** | **운영 중** — Secret `AWS_ROLE_ARN` · `id-token: write` · main only |
+| A) Access Key | GitHub Secrets **삭제 완료** (폴백 코드는 남아 있음) |
 
-Secrets:
+### OIDC (적용됨)
 
-- `AWS_ACCESS_KEY_ID`
-- `AWS_SECRET_ACCESS_KEY`
+1. IAM OIDC Provider: `token.actions.githubusercontent.com` / audience `sts.amazonaws.com`
+2. Role: `arn:aws:iam::447170313588:role/gha-cloud-infra-cicd-plan` (`ReadOnlyAccess`)
+3. Trust: **main 브랜치만** (구형 sub + ID 포함 sub)
+4. Secret: `AWS_ROLE_ARN`
+5. Workflow: `permissions.id-token: write` · plan job = main push / `workflow_dispatch`
 
-### B) OIDC (권장 — 장기 키 제거)
+상세·트러블슈팅(sub 클레임): [OIDC_SETUP.md](OIDC_SETUP.md)
 
-1. AWS IAM에서 GitHub OIDC provider 생성  
-   URL: `https://token.actions.githubusercontent.com`  
-   Audience: `sts.amazonaws.com`
+### Access Key (레거시 · 비권장)
 
-2. IAM Role 신뢰 정책 예 (저장소에 맞게 수정):
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [{
-    "Effect": "Allow",
-    "Principal": {
-      "Federated": "arn:aws:iam::ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com"
-    },
-    "Action": "sts:AssumeRoleWithWebIdentity",
-    "Condition": {
-      "StringEquals": {
-        "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
-      },
-      "StringLike": {
-        "token.actions.githubusercontent.com:sub": "repo:jinhgit/cloud-infra-cicd:*"
-      }
-    }
-  }]
-}
-```
-
-3. Role에 plan 용 읽기 권한 (예: `ViewOnlyAccess` 또는 최소 Describe)
-
-4. GitHub Secrets:
-   - `AWS_ROLE_ARN` = 위 Role ARN
-
-5. `.github/workflows/terraform-ci.yml` 의  
-   `permissions: id-token: write` 주석 해제
-
-워크플로는 `AWS_ROLE_ARN` 이 있으면 **OIDC 우선**, 없으면 Access Key, 둘 다 없으면 plan 스킵.
+과거 폴백용. Secrets 에 키를 다시 넣으면 OIDC 보다 우선하지 않음 — 코드상 **OIDC(`AWS_ROLE_ARN`) 우선**.
 
 ---
 
-## PR plan 코멘트
+## Plan 실행 조건
 
-PR 에서 terraform 변경 + AWS 자격 있으면  
-plan 마지막 약 40줄이 PR 코멘트로 올라갑니다 (free mode 고정).
+| 이벤트 | fmt/validate | terraform plan (OIDC) |
+|--------|--------------|------------------------|
+| push `main` (terraform 경로) | ✅ | ✅ |
+| `workflow_dispatch` | ✅ | ✅ |
+| pull_request | ✅ | ❌ (trust main-only) |
 
 ---
 
@@ -77,4 +53,6 @@ cd BE && npm ci && npm test
 ./scripts/integration-test.sh
 ./scripts/build-images.sh
 cd terraform && terraform fmt -check -recursive && terraform init -backend=false && terraform validate
+# 또는
+make check
 ```
