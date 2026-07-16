@@ -17,8 +17,7 @@ on:
 permissions:
   contents: read
   pull-requests: write
-  # OIDC 사용 시 아래 주석 해제 + docs/CI.md OIDC 설정
-  # id-token: write
+  id-token: write   # GitHub OIDC → AWS (docs/OIDC_SETUP.md)
 
 env:
   TF_IN_AUTOMATION: "true"
