@@ -49,12 +49,13 @@ resource "aws_route_table" "private_web" {
   depends_on = [aws_vpc.main]
 }
 
-# Private Web 라우트: 0.0.0.0/0 → 동일 AZ NAT
+# Private Web 라우트: 0.0.0.0/0 → NAT (NAT 있을 때만)
+# NAT 1개면 모든 AZ 가 nat[0] 사용 / 2개면 동일 AZ
 resource "aws_route" "private_web_nat" {
-  count                  = local.az_count
+  count                  = local.nat_count > 0 ? local.az_count : 0
   route_table_id         = aws_route_table.private_web[count.index].id
   destination_cidr_block = "0.0.0.0/0"
-  nat_gateway_id         = aws_nat_gateway.main[count.index].id
+  nat_gateway_id         = aws_nat_gateway.main[local.nat_count == 1 ? 0 : count.index].id
 
   depends_on = [
     aws_route_table.private_web,

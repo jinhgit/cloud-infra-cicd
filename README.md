@@ -2,6 +2,12 @@
 
 **Terraform**으로 3-Tier 보안 네트워크를 코드화하고, **Amazon EKS** 위에 FE/BE를 올려 **ALB Ingress**로 서비스하며, **GitHub Actions**로 검증 파이프라인을 돌리는 포트폴리오 프로젝트입니다.
 
+> ### 💰 기본은 무료 모드
+>
+> - 일상 개발: **`./scripts/dev-free.sh`** (Docker Compose만, AWS 과금 없음)
+> - Terraform 유료 리소스(NAT/EKS/Bastion)는 `acknowledge_paid_aws = true` 일 때만 생성
+> - 가이드: [docs/FREE_MODE.md](docs/FREE_MODE.md)
+
 | 항목 | 내용 |
 |------|------|
 | 리전 | `ap-northeast-2` (서울) |
@@ -295,11 +301,13 @@ flowchart TB
 - AWS CLI, Terraform ≥ 1.5, Git  
 - 앱/EKS 데모: Docker, kubectl, Helm  
 
-### 로컬 앱 (시나리오 A)
+### 로컬 앱 (시나리오 A) — **추천 · 과금 0**
 
 ```bash
-docker compose up --build
+./scripts/dev-free.sh
+# 또는: docker compose up --build
 # http://localhost:8080
+# http://localhost:8080/lab.html
 ```
 
 ### Terraform (네트워크만, EKS 끔)
@@ -365,6 +373,7 @@ cloud-infra-cicd/
 | [architecture](docs/architecture.md) | 네트워크 상세 |
 | [STAGE_1_APPLY](docs/STAGE_1_APPLY.md) | 네트워크 apply 런북 |
 | [BASTION](docs/BASTION.md) | Bastion SSH / SSM 접속 |
+| [**무료 모드**](docs/FREE_MODE.md) | 과금 없이 개발하는 기본 경로 |
 | [**실습 확인 가이드**](docs/LAB_VERIFY.md) | 콘솔·CLI·FE로 상태 확인 |
 | [EKS_DESIGN](docs/EKS_DESIGN.md) | EKS 설계 |
 | [**EKS_E2E_CHECKLIST**](docs/EKS_E2E_CHECKLIST.md) | **데모 당일 전체 명령** |

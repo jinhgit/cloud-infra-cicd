@@ -25,7 +25,10 @@ env:
   AWS_REGION: ap-northeast-2
   # plan 전용 더미 (실제 Bastion IP 아님 — CI 검증용 RFC 5737 문서 대역)
   TF_VAR_my_ip: "203.0.113.10/32"
+  TF_VAR_acknowledge_paid_aws: "false"
+  TF_VAR_nat_gateway_count: "0"
   TF_VAR_enable_eks: "false"
+  TF_VAR_enable_bastion: "false"
   TF_VAR_enable_ecr: "false"
   TF_VAR_environment: "dev"
   TF_VAR_project_name: "cloud-infra"
@@ -122,7 +125,10 @@ jobs:
         run: |
           terraform plan -no-color -input=false \
             -var="my_ip=${TF_VAR_my_ip}" \
+            -var="acknowledge_paid_aws=false" \
+            -var="nat_gateway_count=0" \
             -var="enable_eks=false" \
+            -var="enable_bastion=false" \
             -var="enable_ecr=false" \
             -out=tfplan
 

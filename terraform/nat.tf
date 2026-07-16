@@ -1,10 +1,10 @@
 # ===================================================
-# Elastic IP 할당 (NAT Gateway용, AZ별 1개)
-# PRD: AZ당 NAT 1 + EIP 1 (총 2) — HA / 동일 AZ 라우팅
+# NAT Gateway + EIP
+# 기본: nat_count=0 (무료). 유료 데모 시에만 1~2개
 # ===================================================
 
 resource "aws_eip" "nat" {
-  count  = local.az_count
+  count  = local.nat_count
   domain = "vpc"
 
   tags = {
@@ -14,13 +14,8 @@ resource "aws_eip" "nat" {
   depends_on = [aws_internet_gateway.main]
 }
 
-# ===================================================
-# NAT Gateway (각 AZ Public 서브넷에 배치)
-# Private Web 서브넷 아웃바운드 인터넷 연결
-# ===================================================
-
 resource "aws_nat_gateway" "main" {
-  count         = local.az_count
+  count         = local.nat_count
   allocation_id = aws_eip.nat[count.index].id
   subnet_id     = aws_subnet.public[count.index].id
 

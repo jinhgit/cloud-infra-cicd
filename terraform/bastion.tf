@@ -6,7 +6,7 @@
 # ===================================================
 
 data "aws_ami" "bastion" {
-  count       = var.enable_bastion ? 1 : 0
+  count       = local.bastion_enabled ? 1 : 0
   most_recent = true
   owners      = ["amazon"]
 
@@ -29,7 +29,7 @@ data "aws_ami" "bastion" {
 # ----- IAM: SSM Session Manager -----
 
 data "aws_iam_policy_document" "bastion_assume" {
-  count = var.enable_bastion ? 1 : 0
+  count = local.bastion_enabled ? 1 : 0
 
   statement {
     effect  = "Allow"
@@ -43,7 +43,7 @@ data "aws_iam_policy_document" "bastion_assume" {
 }
 
 resource "aws_iam_role" "bastion" {
-  count              = var.enable_bastion ? 1 : 0
+  count              = local.bastion_enabled ? 1 : 0
   name               = "${local.name_prefix}-bastion-role"
   assume_role_policy = data.aws_iam_policy_document.bastion_assume[0].json
 
@@ -53,13 +53,13 @@ resource "aws_iam_role" "bastion" {
 }
 
 resource "aws_iam_role_policy_attachment" "bastion_ssm" {
-  count      = var.enable_bastion ? 1 : 0
+  count      = local.bastion_enabled ? 1 : 0
   role       = aws_iam_role.bastion[0].name
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
 resource "aws_iam_instance_profile" "bastion" {
-  count = var.enable_bastion ? 1 : 0
+  count = local.bastion_enabled ? 1 : 0
   name  = "${local.name_prefix}-bastion-profile"
   role  = aws_iam_role.bastion[0].name
 
@@ -71,7 +71,7 @@ resource "aws_iam_instance_profile" "bastion" {
 # ----- EC2 Bastion -----
 
 resource "aws_instance" "bastion" {
-  count = var.enable_bastion ? 1 : 0
+  count = local.bastion_enabled ? 1 : 0
 
   ami                         = data.aws_ami.bastion[0].id
   instance_type               = var.bastion_instance_type
@@ -121,7 +121,7 @@ resource "aws_instance" "bastion" {
 
 # 향후 Private Web EC2 점프용 (EKS 노드 SG 와는 별개 — Stage 2 레거시/점프 경로)
 resource "aws_vpc_security_group_ingress_rule" "web_ssh_from_bastion" {
-  count = var.enable_bastion ? 1 : 0
+  count = local.bastion_enabled ? 1 : 0
 
   security_group_id            = aws_security_group.web_ec2.id
   description                  = "Allow SSH from Bastion"

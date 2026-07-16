@@ -132,14 +132,14 @@ output "bastion_private_ip" {
 
 output "bastion_ssh_command" {
   description = "SSH 예시 (key pair 사용 시). 키 경로·사용자 확인 필요 (AL2023: ec2-user)"
-  value = var.enable_bastion && var.bastion_key_name != "" ? (
+  value = local.bastion_enabled && var.bastion_key_name != "" ? (
     "ssh -i /path/to/${var.bastion_key_name}.pem ec2-user@${try(aws_instance.bastion[0].public_ip, "PENDING")}"
   ) : null
 }
 
 output "bastion_ssm_command" {
   description = "SSM Session Manager 접속 명령"
-  value = var.enable_bastion ? (
+  value = local.bastion_enabled ? (
     "aws ssm start-session --target ${try(aws_instance.bastion[0].id, "PENDING")} --region ${var.aws_region}"
   ) : null
 }
@@ -149,28 +149,31 @@ output "bastion_ssm_command" {
 # ===================================================
 
 output "deployment_summary" {
-  description = "배포 요약 (Stage 1 + 선택 Bastion/EKS)"
+  description = "배포 요약 (비용 모드 포함)"
   value = {
-    project             = var.project_name
-    environment         = var.environment
-    region              = var.aws_region
-    vpc_cidr            = var.vpc_cidr
-    availability_zones  = local.availability_zones
-    public_subnets      = length(aws_subnet.public)
-    private_web_subnets = length(aws_subnet.private_web)
-    private_db_subnets  = length(aws_subnet.private_db)
-    nat_gateways        = length(aws_nat_gateway.main)
-    private_web_rts     = length(aws_route_table.private_web)
-    private_db_rts      = length(aws_route_table.private_db)
-    enable_bastion      = var.enable_bastion
-    enable_eks          = var.enable_eks
-    enable_ecr          = var.enable_ecr || var.enable_eks
-    eks_cluster_name    = local.eks_enabled ? local.eks_cluster_name : null
-    bastion_public_ip   = try(aws_instance.bastion[0].public_ip, null)
+    project              = var.project_name
+    environment          = var.environment
+    region               = var.aws_region
+    vpc_cidr             = var.vpc_cidr
+    availability_zones   = local.availability_zones
+    public_subnets       = length(aws_subnet.public)
+    private_web_subnets  = length(aws_subnet.private_web)
+    private_db_subnets   = length(aws_subnet.private_db)
+    acknowledge_paid_aws = var.acknowledge_paid_aws
+    nat_gateways         = local.nat_count
+    private_web_rts      = length(aws_route_table.private_web)
+    private_db_rts       = length(aws_route_table.private_db)
+    enable_bastion       = local.bastion_enabled
+    enable_eks           = local.eks_enabled
+    enable_ecr           = local.ecr_enabled
+    eks_cluster_name     = local.eks_enabled ? local.eks_cluster_name : null
+    bastion_public_ip    = try(aws_instance.bastion[0].public_ip, null)
     status = (
-      var.enable_eks ? "stage1+eks" :
-      var.enable_bastion ? "stage1+bastion" :
-      "stage1-ha-network"
+      !var.acknowledge_paid_aws ? "free-mode" :
+      local.eks_enabled ? "paid-eks" :
+      local.bastion_enabled ? "paid-bastion" :
+      local.nat_count > 0 ? "paid-network" :
+      "free-vpc-skeleton"
     )
   }
 }

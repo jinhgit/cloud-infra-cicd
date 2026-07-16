@@ -11,18 +11,28 @@ locals {
       Project     = var.project_name
       CreatedBy   = "Terraform"
       ManagedBy   = "Terraform"
+      CostMode    = var.acknowledge_paid_aws ? "paid-demo" : "free"
     },
     var.tags
   )
 
-  # PRD: ap-northeast-2a, ap-northeast-2c 고정 (고가용성 학습용)
+  # PRD: ap-northeast-2a, ap-northeast-2c 고정
   availability_zones = ["ap-northeast-2a", "ap-northeast-2c"]
   az_count           = length(local.availability_zones)
 
-  # EKS
-  eks_cluster_name = "${local.name_prefix}-eks"
-  eks_enabled      = var.enable_eks
+  # ----- 비용 안전 모드 -----
+  # acknowledge_paid_aws=false 이면 유료 리소스 count 전부 0
+  paid_ok = var.acknowledge_paid_aws
 
-  # AWS LB Controller가 서브넷을 찾을 때 사용하는 태그 키
+  # NAT: 유료 동의 + 개수 > 0 일 때만
+  nat_count = local.paid_ok ? var.nat_gateway_count : 0
+
+  # Bastion / EKS / ECR
+  bastion_enabled = local.paid_ok && var.enable_bastion
+  eks_enabled     = local.paid_ok && var.enable_eks
+  ecr_enabled     = local.paid_ok && (var.enable_ecr || var.enable_eks)
+
+  # EKS
+  eks_cluster_name    = "${local.name_prefix}-eks"
   eks_cluster_tag_key = "kubernetes.io/cluster/${local.eks_cluster_name}"
 }

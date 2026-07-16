@@ -110,17 +110,42 @@ variable "tags" {
 }
 
 # ===================================================
-# EKS / ECR (Stage 4) — 기본 비활성 (비용 통제)
+# 비용 가드 (기본: 무료 모드)
+# ===================================================
+
+variable "acknowledge_paid_aws" {
+  description = <<-EOT
+    true 일 때만 NAT/EKS/Bastion/ECR 등 유료 AWS 리소스 생성 가능.
+    기본 false = 로컬 Docker/CI 만 사용 (과금 없음).
+    데모 시에만 true 로 바꾸고, 끝나면 즉시 terraform destroy.
+  EOT
+  type        = bool
+  default     = false
+}
+
+variable "nat_gateway_count" {
+  description = "NAT Gateway 개수. 무료 기본 0. 유료 데모 시 1(절약) 또는 2(HA). acknowledge_paid_aws=true 필요"
+  type        = number
+  default     = 0
+
+  validation {
+    condition     = contains([0, 1, 2], var.nat_gateway_count)
+    error_message = "nat_gateway_count 는 0, 1, 2 중 하나여야 합니다."
+  }
+}
+
+# ===================================================
+# EKS / ECR (Stage 4) — 기본 비활성 + paid 동의 필요
 # ===================================================
 
 variable "enable_eks" {
-  description = "true 시 EKS 클러스터·노드·OIDC·LB Controller IRSA 생성 (과금 주의)"
+  description = "true 시 EKS 생성 (유료). acknowledge_paid_aws=true 필수"
   type        = bool
   default     = false
 }
 
 variable "enable_ecr" {
-  description = "true 시 FE/BE ECR 리포지토리 생성 (enable_eks와 독립 가능)"
+  description = "true 시 ECR 생성 (소액 스토리지). acknowledge_paid_aws=true 필수"
   type        = bool
   default     = false
 }
@@ -170,7 +195,7 @@ variable "eks_public_access_cidrs" {
 # ===================================================
 
 variable "enable_bastion" {
-  description = "true 시 Public 서브넷에 Bastion EC2 생성 (과금 주의 — 미사용 시 false/destroy)"
+  description = "true 시 Bastion EC2 생성 (유료). acknowledge_paid_aws=true 필수"
   type        = bool
   default     = false
 }

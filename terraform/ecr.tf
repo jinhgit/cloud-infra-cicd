@@ -1,11 +1,6 @@
 # ===================================================
-# Amazon ECR (FE / BE 이미지)
-# enable_ecr = true 또는 enable_eks = true 시 생성
+# Amazon ECR (FE / BE 이미지) — 유료 동의 + 플래그 필요
 # ===================================================
-
-locals {
-  ecr_enabled = var.enable_ecr || var.enable_eks
-}
 
 resource "aws_ecr_repository" "fe" {
   count                = local.ecr_enabled ? 1 : 0

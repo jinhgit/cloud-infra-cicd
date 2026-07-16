@@ -1,12 +1,8 @@
 # ===================================================
-# Terraform 변수값 예제
+# Terraform 변수 예제 — 기본은 무료 모드
 #
-# 사용법:
-#   cp terraform.tfvars.example terraform.tfvars
-#   # my_ip 등 수정 후
-#   terraform plan / apply
-#
-# 보안: terraform.tfvars 는 Git에 커밋하지 말 것
+#  cp terraform.tfvars.example terraform.tfvars
+#  보안: terraform.tfvars 는 Git 커밋 금지
 # ===================================================
 
 aws_region   = "ap-northeast-2"
@@ -18,7 +14,6 @@ public_subnet_cidrs      = ["10.0.1.0/24", "10.0.2.0/24"]
 private_web_subnet_cidrs = ["10.0.10.0/24", "10.0.11.0/24"]
 private_db_subnet_cidrs  = ["10.0.20.0/24", "10.0.21.0/24"]
 
-# 본인 공인 IP (필수) — https://www.whatismyipaddress.com
 my_ip = "YOUR_PUBLIC_IP/32"
 
 tags = {
@@ -26,26 +21,22 @@ tags = {
   Application = "CloudInfra"
 }
 
-# -------------------------------------------------
-# 기능 플래그 (기본 OFF — 비용 절감)
-# -------------------------------------------------
-enable_bastion = false
-enable_eks     = false
-enable_ecr     = false
+# ===================================================
+# ★ 무료 모드 (기본) — 그대로 두세요
+# ===================================================
+acknowledge_paid_aws = false
+nat_gateway_count    = 0
+enable_bastion       = false
+enable_eks           = false
+enable_ecr           = false
 
-# Bastion (enable_bastion = true)
-# 1) AWS 콘솔/CLI 로 리전에 Key Pair 생성 후 이름 입력 (SSH 사용 시)
-# 2) 키 없이 SSM 만 쓰려면 bastion_key_name = "" 유지
-# bastion_key_name      = "my-keypair"
-# bastion_instance_type = "t3.micro"
-# bastion_volume_size   = 30
-
-# EKS (enable_eks = true)
-# eks_cluster_version     = "1.29"
-# eks_cluster_version     = "1.32"
-# eks_node_instance_type  = "t3.small"   # Free Tier 계정: medium 불가할 수 있음
-# eks_node_desired_size   = 2
-# eks_node_min_size       = 2
-# eks_node_max_size       = 4
-# eks_endpoint_public_access = true
-# eks_public_access_cidrs    = []  # 비우면 my_ip 사용
+# ===================================================
+# 유료 데모 당일만 (끝나면 전부 false + destroy)
+# ===================================================
+# acknowledge_paid_aws = true
+# nat_gateway_count    = 2
+# enable_bastion       = true
+# bastion_key_name     = "cloud-infra-bastion"
+# enable_eks           = true
+# eks_cluster_version  = "1.32"
+# eks_node_instance_type = "t3.small"
