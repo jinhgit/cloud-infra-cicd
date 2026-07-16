@@ -56,6 +56,11 @@ jobs:
     needs: check
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # job 레벨에서도 OIDC 토큰 발급 보장
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
     defaults:
       run:
         working-directory: terraform
@@ -79,7 +84,7 @@ jobs:
           if [ -n "${AWS_ROLE_ARN}" ]; then
             echo "mode=oidc" >> "$GITHUB_OUTPUT"
             echo "configured=true" >> "$GITHUB_OUTPUT"
-            echo "OIDC role 사용"
+            echo "OIDC role 사용: ${AWS_ROLE_ARN}"
           elif [ -n "${AWS_ACCESS_KEY_ID}" ]; then
             echo "mode=keys" >> "$GITHUB_OUTPUT"
             echo "configured=true" >> "$GITHUB_OUTPUT"
@@ -96,7 +101,9 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: gha-terraform-plan
           aws-region: ${{ env.AWS_REGION }}
+          audience: sts.amazonaws.com
 
       - name: Configure AWS (access keys)
         if: steps.aws.outputs.mode == 'keys'
