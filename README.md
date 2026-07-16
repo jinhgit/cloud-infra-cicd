@@ -1,274 +1,409 @@
 # IaC 기반 클라우드 네트워크 자동화 및 CI/CD 파이프라인
 
-클라우드 엔지니어로서 **Terraform을 이용한 인프라 코드화**, **3-Tier 보안 네트워크**, **Amazon EKS 워크로드(ALB Ingress)**, **GitHub Actions CI/CD**를 실현하는 프로젝트입니다.
+**Terraform**으로 3-Tier 보안 네트워크를 코드화하고, **Amazon EKS** 위에 FE/BE를 올려 **ALB Ingress**로 서비스하며, **GitHub Actions**로 검증 파이프라인을 돌리는 포트폴리오 프로젝트입니다.
 
-## 📋 프로젝트 개요
-
-- **목표**: Terraform으로 AWS 인프라를 코드화하고, GitHub Actions를 통한 자동 배포 파이프라인 구축
-- **기간**: 계절학기 (3~4주)
-- **핵심 가치**: 
-  - 수동 콘솔 작업 → 100% 코드화
-  - 인적 오류 최소화 및 배포 속도 향상
-  - 테스트 비용 절감 (`terraform destroy` 한 번에 정리)
-
-## 📚 프로젝트 문서
-
-요구사항·설계·구현 가이드는 `docs/`에 정리되어 있습니다.
-
-| 문서 | 설명 |
+| 항목 | 내용 |
 |------|------|
-| [PRD](docs/PRD.md) | 제품 요구사항 — 목표, 범위, 로드맵, NFR, 성공 지표 |
-| [기능 명세서](docs/FUNCTIONAL_SPEC.md) | 기능 ID, 수락 기준, 테스트 케이스, 단계별 DoD |
-| [아키텍처](docs/architecture.md) | 3-Tier 네트워크·SG·라우팅·트래픽 흐름 상세 |
-| [프로젝트 구조](docs/PROJECT_STRUCTURE.md) | Terraform 파일별 역할 및 완성 상태 |
-| [1단계 개발 가이드](docs/STAGE_1_DEV_GUIDE.md) | Stage 1 구현 절차·체크리스트·트러블슈팅 |
-| [Stage 1 Apply 런북](docs/STAGE_1_APPLY.md) | plan/apply/destroy 실무 절차 |
-| [EKS 설계](docs/EKS_DESIGN.md) | EKS·IRSA·ECR·삭제 순서 |
-| [EKS E2E 체크리스트](docs/EKS_E2E_CHECKLIST.md) | 데모 당일 명령 순서·비용 destroy |
-| [k8s 매니페스트](k8s/README.md) | FE/BE Ingress 배포 가이드 |
-| [CI 가이드](docs/CI.md) | GitHub Actions (Terraform / BE) |
-
-**읽는 순서 권장:** PRD → 기능 명세서 → CI → Stage 1 Apply → EKS 설계 → **E2E 체크리스트** → k8s
-
-## 🏗️ 시스템 아키텍처
-
-### 네트워크 구성
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                          AWS VPC (10.0.0.0/16)                  │
-├─────────────────────────────────────────────────────────────────┤
-│  ap-northeast-2a (AZ-A)   │   ap-northeast-2c (AZ-C)            │
-├──────────────────────────┬──────────────────────────────────────┤
-│ Public Subnet            │  Public Subnet                       │
-│ (10.0.1.0/24)            │  (10.0.2.0/24)                       │
-│ ├─ Bastion Host          │  ├─ ALB                             │
-│ └─ NAT Gateway + EIP     │  └─ NAT Gateway + EIP               │
-│    (IGW는 VPC 공통)       │                                     │
-├──────────────────────────┼──────────────────────────────────────┤
-│ Private Web Subnet       │  Private Web Subnet                  │
-│ (10.0.10.0/24)           │  (10.0.11.0/24)                      │
-│ └─ EC2 Web Server (1)    │  └─ EC2 Web Server (2)               │
-├──────────────────────────┼──────────────────────────────────────┤
-│ Private DB Subnet        │  Private DB Subnet                   │
-│ (10.0.20.0/24)           │  (10.0.21.0/24)                      │
-│ └─ RDS 또는 DB 인스턴스   │  └─ RDS 또는 DB 인스턴스            │
-└──────────────────────────┴──────────────────────────────────────┘
-```
-
-### 주요 특징
-- ✅ **3-Tier 아키텍처**: Public/Web/DB 계층 분리 (서브넷 6개)
-- ✅ **고가용성**: 2 AZ, NAT AZ별 1개(총 2), ALB 다중 타깃
-- ✅ **보안**: 최소 권한 원칙(Least Privilege) 적용
-- ✅ **비용 통제**: 테스트 후 `terraform destroy` (NAT·ALB 상시 과금 주의)
-
-## 🚀 빠른 시작
-
-### 1. 필수 사항
-- AWS 계정 및 CLI 설치
-- Terraform v1.5+
-- Git
-
-### 2. AWS 인증 설정
-```bash
-aws configure
-# AWS Access Key ID, Secret Access Key 입력
-# Default region: ap-northeast-2
-```
-
-### 3. 프로젝트 초기화
-```bash
-cd terraform
-terraform init
-```
-
-### 4. 변수 설정
-```bash
-# terraform.tfvars 파일 생성
-cp terraform.tfvars.example terraform.tfvars
-
-# 본인의 공인 IP 주소를 terraform.tfvars에 입력
-# my_ip = "YOUR_PUBLIC_IP/32"
-```
-
-### 5. 계획 검토
-```bash
-terraform plan
-```
-
-### 6. 인프라 배포
-```bash
-terraform apply
-```
-
-### 7. 배포 완료 후 정리 (테스트용)
-```bash
-terraform destroy
-```
-
-## 📁 디렉토리 구조
-
-```
-cicd/
-├── README.md                          # 이 파일
-├── .gitignore                         # Git 무시 설정
-├── FE/                                # 프론트엔드 (정적 + Nginx Dockerfile)
-│   ├── public/                        # HTML/CSS/JS
-│   ├── nginx.conf
-│   └── Dockerfile
-├── BE/                                # 백엔드 (Node.js Express API)
-│   ├── src/                           # server, routes, middleware
-│   ├── tests/
-│   ├── package.json
-│   └── Dockerfile
-├── k8s/                               # EKS 매니페스트 (FE/BE/Ingress)
-│   ├── namespace.yaml
-│   ├── fe/ be/ ingress/
-│   └── aws-load-balancer-controller/
-├── terraform/                         # Terraform (Stage 1 네트워크 + 선택 EKS)
-│   ├── main.tf
-│   ├── variables.tf
-│   ├── outputs.tf
-│   ├── locals.tf
-│   ├── vpc.tf / subnets.tf / nat.tf / routing.tf / security_groups.tf
-│   └── terraform.tfvars.example
-├── docs/
-│   ├── PRD.md                         # 제품 요구사항 (PRD v1.1, EKS 포함)
-│   ├── FUNCTIONAL_SPEC.md             # 기능 명세서
-│   ├── architecture.md
-│   ├── PROJECT_STRUCTURE.md
-│   ├── STAGE_1_DEV_GUIDE.md
-│   ├── STAGE_1_APPLY.md               # Stage 1 apply 런북
-│   └── EKS_DESIGN.md                  # EKS 설계
-└── .github/
-    └── workflows/
-        ├── be-ci.yml                  # BE npm test
-        └── terraform-ci.yml           # fmt / validate / plan
-```
-
-### CI 요약
-
-```bash
-# 로컬 동일 검사
-cd BE && npm ci && npm test
-cd terraform && terraform fmt -check -recursive && terraform init -backend=false && terraform validate
-```
-
-- **BE CI:** `BE/**` 변경 시 자동 테스트  
-- **Terraform CI:** `fmt`+`validate` 필수, `plan`은 `AWS_ACCESS_KEY_ID` 시크릿 있을 때만  
-- 설정: [docs/CI.md](docs/CI.md)
-
-### 앱 로컬 실행 (요약)
-
-**권장 — Docker Compose (FE+BE 통합, same-origin)**
-
-```bash
-docker compose up --build
-# FE  http://localhost:8080
-# BE  http://localhost:3000/health
-# 브라우저에서 /health, /api/hello 자동 호출 확인
-```
-
-**개별 실행**
-
-```bash
-# Backend
-cd BE && npm ci && npm run dev
-
-# Frontend only (config.js 의 API_BASE_URL 을 http://localhost:3000 으로)
-cd FE && python3 -m http.server 8080 --directory public
-```
-
-## 📊 [1단계] Terraform 인프라 코드화
-
-### 구현 범위
-- ✅ VPC 및 Internet Gateway
-- ✅ Public/Private 서브넷 **6개** (Public 2 + Web 2 + DB 2)
-- ✅ NAT Gateway **2** + Elastic IP **2** (AZ별)
-- ✅ 라우팅 테이블 **5개** (Public 1 + Web AZ별 2 + DB AZ별 2)
-- ✅ 보안 그룹 4개 (ALB / Web / Bastion / RDS)
-
-### 완료 기준
-- [ ] `terraform validate` 통과
-- [ ] `terraform plan` 산출물 검토 완료
-- [ ] 주요 리소스 6개 이상 생성 예정
-- [ ] 문서화 완성
-
-## 🔐 보안 고려사항
-
-1. **AWS 인증 정보 보안**
-   - `terraform.tfvars` 파일은 Git에 커밋하지 않음
-   - `.gitignore`에 `*.tfvars` 추가 (기본 설정됨)
-   - GitHub Secrets를 활용한 안전한 CI/CD
-
-2. **최소 권한 원칙**
-   - Bastion: 개발자 IP만 SSH 접속 허용
-   - Web EC2: ALB로부터의 트래픽만 허용
-   - DB: Web 계층으로부터만 접속 허용
-
-3. **State 파일 관리**
-   - 초기: 로컬 `terraform.tfstate` 사용
-   - 향후: S3 + DynamoDB Remote State로 전환 권장
-
-## 📝 주요 명령어
-
-```bash
-# Terraform 초기화
-terraform init
-
-# 코드 포맷 정리
-terraform fmt -recursive
-
-# 문법 검사
-terraform validate
-
-# 변경 사항 미리보기
-terraform plan
-
-# 실제 배포
-terraform apply
-
-# 리소스 삭제
-terraform destroy
-
-# 상태 파일 확인
-terraform state list
-terraform state show aws_vpc.main
-```
-
-## 🔄 진행 단계
-
-| 단계 | 기간 | 목표 | 상태 |
-|------|------|------|------|
-| 1단계 | 1~2주 | Terraform 네트워크 IaC (NAT 2·RT 5) | 🔴 진행중 |
-| 2단계 | ~1주 | Bastion (레거시 EC2 웹은 선택 P2) | ⚪ 예정 |
-| 3단계 | ~1주 | GitHub Actions (fmt/validate/plan + BE test) | 🟡 골격 완료 |
-| 4단계 | ~1–2주 | **EKS + Ingress 앱 + (P1) ECR/CD** | ⚪ 예정 |
-
-상세 범위·성공 기준: [docs/PRD.md](docs/PRD.md) §14 EKS 확장
-
-## 💡 학습 포인트
-
-이 프로젝트를 통해 습득할 수 있는 역량:
-- ✅ AWS 네트워크 아키텍처 설계
-- ✅ Terraform을 이용한 IaC 작성
-- ✅ 고가용성 및 보안을 고려한 인프라 구축
-- ✅ GitHub Actions 기반 CI/CD 파이프라인
-- ✅ DevOps 기본 개념 및 실무 경험
-
-## 📖 외부 참고 자료
-
-- [Terraform 공식 문서](https://www.terraform.io/docs)
-- [AWS VPC 개념 가이드](https://docs.aws.amazon.com/vpc/)
-- [GitHub Actions 가이드](https://docs.github.com/actions)
-
-프로젝트 내부 문서는 위의 [프로젝트 문서](#-프로젝트-문서) 섹션을 참고하세요.
-
-## 📞 문의 및 피드백
-
-이 프로젝트에 대한 개선사항이나 버그는 Issues에 등록해주세요.
+| 리전 | `ap-northeast-2` (서울) |
+| IaC | Terraform ≥ 1.5 |
+| 앱 | `FE/` (Nginx 정적) · `BE/` (Node.js Express) |
+| 오케스트레이션 | Amazon EKS (선택 활성화) |
+| CI | GitHub Actions (`fmt` / `validate` / `plan` · BE test) |
+| 저장소 | [github.com/jinhgit/cloud-infra-cicd](https://github.com/jinhgit/cloud-infra-cicd) |
 
 ---
 
-**마지막 업데이트**: 2026-07-16  
-**버전**: v0.2.0 (PRD v1.1 — EKS 권장 A 범위 추가)
+## 목차
+
+1. [한눈에 보는 아키텍처](#한눈에-보는-아키텍처)
+2. [데모 시나리오](#데모-시나리오)
+3. [빠른 시작](#빠른-시작)
+4. [디렉터리 구조](#디렉터리-구조)
+5. [진행 단계](#진행-단계)
+6. [프로젝트 문서](#프로젝트-문서)
+7. [보안·비용](#보안비용)
+
+---
+
+## 한눈에 보는 아키텍처
+
+### 전체 구성 (권장 A — EKS)
+
+```mermaid
+flowchart TB
+  subgraph Internet["Internet"]
+    User["사용자 / 브라우저"]
+    Dev["개발자"]
+    GH["GitHub Actions"]
+  end
+
+  subgraph AWS["AWS ap-northeast-2"]
+    subgraph VPC["VPC 10.0.0.0/16"]
+      IGW["Internet Gateway"]
+
+      subgraph Public["Public Subnets ×2 AZ"]
+        ALB["ALB\n(AWS LB Controller)"]
+        NAT["NAT Gateway ×2\n(AZ별)"]
+        Bastion["Bastion (선택)"]
+      end
+
+      subgraph PrivateWeb["Private Web ×2 AZ"]
+        Nodes["EKS Worker Nodes"]
+        Pods["Pods: FE · BE"]
+      end
+
+      subgraph PrivateDB["Private DB ×2 AZ"]
+        DB["RDS 공간\n(선택)"]
+      end
+
+      EKS["EKS Control Plane"]
+    end
+
+    ECR["Amazon ECR\nFE / BE 이미지"]
+  end
+
+  User -->|"HTTP :80"| IGW --> ALB
+  ALB -->|"Ingress 경로"| Pods
+  Pods --> Nodes
+  Nodes -->|"outbound"| NAT --> IGW
+  EKS --- Nodes
+  Dev -->|"SSH my_ip"| Bastion
+  Dev -->|"kubectl / API"| EKS
+  GH -->|"plan / test"| AWS
+  Nodes -->|"image pull"| ECR
+  Pods -.->|"선택 3306"| DB
+```
+
+### 트래픽 경로 (런타임)
+
+```mermaid
+sequenceDiagram
+  participant U as 사용자
+  participant ALB as ALB (Public)
+  participant FE as FE Pod
+  participant BE as BE Pod
+
+  U->>ALB: GET /
+  ALB->>FE: path /
+  FE-->>U: HTML/CSS/JS
+
+  U->>ALB: GET /health
+  ALB->>BE: path /health
+  BE-->>U: {"status":"ok"}
+
+  U->>ALB: GET /api/hello
+  ALB->>BE: path /api/hello
+  BE-->>U: {"message":"Hello from BE"}
+```
+
+| 경로 | 대상 | 용도 |
+|------|------|------|
+| `/` | FE Service | 데모 UI |
+| `/health` | BE Service | API 헬스 (ALB·FE 호출) |
+| `/api/*` | BE Service | REST API |
+| FE `/healthz` | FE 컨테이너 | K8s probe (클러스터 내부) |
+
+### 네트워크 계층 (Stage 1)
+
+```mermaid
+flowchart LR
+  subgraph AZ_A["ap-northeast-2a"]
+    PubA["Public\n10.0.1.0/24\nNAT-A"]
+    WebA["Private Web\n10.0.10.0/24"]
+    DbA["Private DB\n10.0.20.0/24"]
+  end
+  subgraph AZ_C["ap-northeast-2c"]
+    PubC["Public\n10.0.2.0/24\nNAT-C"]
+    WebC["Private Web\n10.0.11.0/24"]
+    DbC["Private DB\n10.0.21.0/24"]
+  end
+  WebA -->|"0.0.0.0/0"| PubA
+  WebC -->|"0.0.0.0/0"| PubC
+  DbA -.->|"인터넷 경로 없음"| DbA
+  DbC -.->|"인터넷 경로 없음"| DbC
+```
+
+| 항목 | 값 |
+|------|-----|
+| VPC | `10.0.0.0/16` |
+| 서브넷 | **6** (Public 2 + Web 2 + DB 2) |
+| NAT / EIP | **AZ당 1 = 2** |
+| Route Table | **5** (Public 1 + Web AZ별 2 + DB AZ별 2) |
+| SG | ALB · Web · Bastion · RDS |
+
+ASCII 상세도는 [docs/architecture.md](docs/architecture.md) 참고.
+
+### CI/CD 흐름
+
+```mermaid
+flowchart LR
+  subgraph Dev["개발"]
+    Code["git push / PR"]
+  end
+  subgraph Actions["GitHub Actions"]
+    BECI["BE CI\nnpm test"]
+    TFCheck["Terraform CI\nfmt + validate"]
+    TFPlan["terraform plan\n(시크릿 있을 때)"]
+  end
+  subgraph Manual["수동 · 데모 당일"]
+    Apply["terraform apply\nenable_eks=true"]
+    Deploy["ECR push + kubectl"]
+    Destroy["terraform destroy"]
+  end
+
+  Code --> BECI
+  Code --> TFCheck --> TFPlan
+  Apply --> Deploy --> Destroy
+```
+
+- **CI는 apply 하지 않음** (과금·안전).  
+- 설정: [docs/CI.md](docs/CI.md)
+
+---
+
+## 데모 시나리오
+
+포트폴리오/발표용으로 **두 가지 시나리오**를 준비했습니다.
+
+### 시나리오 A — 로컬 앱 데모 (비용 0, 5분)
+
+**증명 포인트:** FE/BE same-origin 연동, Docker 이미지, 헬스 API
+
+```bash
+# 1) 저장소 클론 후
+docker compose up --build
+
+# 2) 브라우저
+open http://localhost:8080
+# 또는
+curl -sS http://localhost:8080/health
+curl -sS http://localhost:8080/api/hello
+
+# 3) 종료
+docker compose down
+```
+
+| 확인 | 기대 |
+|------|------|
+| UI Backend Health | OK (200) |
+| UI GET /api/hello | OK (200) |
+| `BE` `npm test` | 3 passed |
+
+```mermaid
+flowchart LR
+  Browser["브라우저 :8080"] --> FE["FE 컨테이너\nNginx"]
+  FE -->|"proxy /health /api"| BE["BE 컨테이너\n:3000"]
+```
+
+---
+
+### 시나리오 B — AWS EKS E2E 데모 (과금 있음, 2.5~4시간)
+
+**증명 포인트:** 3-Tier 네트워크 · EKS · ALB Ingress · ECR · destroy 수명주기
+
+> **전체 명령·체크박스:** [docs/EKS_E2E_CHECKLIST.md](docs/EKS_E2E_CHECKLIST.md)  
+> 아래는 발표용 **요약 스크립트**입니다.
+
+#### B-1. 인프라 기동
+
+```bash
+cd terraform
+# terraform.tfvars: my_ip = "현재공인IP/32", enable_eks = true
+terraform init
+terraform plan -out=tfplan
+terraform apply tfplan
+
+export AWS_REGION=ap-northeast-2
+export CLUSTER_NAME=$(terraform output -raw eks_cluster_name)
+aws eks update-kubeconfig --region "$AWS_REGION" --name "$CLUSTER_NAME"
+kubectl get nodes   # Ready ≥ 2
+```
+
+#### B-2. Controller · 이미지 · 앱
+
+```bash
+# LB Controller: k8s/aws-load-balancer-controller/install.md
+# ECR 로그인 후
+docker build -t "$(terraform output -json ecr_repository_urls | jq -r .be):latest" ../BE
+docker build -t "$(terraform output -json ecr_repository_urls | jq -r .fe):latest" ../FE
+docker push ...   # E2E 체크리스트 §3 참고
+
+# 매니페스트 IMAGE_* 치환 후
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/be/ -f k8s/fe/ -f k8s/ingress/
+kubectl -n cloud-infra get ingress cloud-infra   # ADDRESS = ALB DNS
+```
+
+#### B-3. 성공 판정 (발표 시 보여줄 것)
+
+```bash
+export ALB_DNS=$(kubectl -n cloud-infra get ingress cloud-infra \
+  -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+
+curl -sS -o /dev/null -w "%{http_code}\n" "http://${ALB_DNS}/"          # 200
+curl -sS "http://${ALB_DNS}/health"                                      # status ok
+curl -sS "http://${ALB_DNS}/api/hello"                                   # Hello from BE
+# 브라우저: http://$ALB_DNS/
+```
+
+| 데모 체크 | 통과 기준 |
+|-----------|-----------|
+| 노드 | Ready ≥ 2, Private 서브넷 |
+| Ingress | ALB DNS 할당 |
+| `/` | FE HTML 200 |
+| `/health`, `/api/hello` | BE JSON 200 |
+| 보안 스토리 | 노드 공인 직접 접속 없음, Bastion은 `my_ip`만 (구현 시) |
+
+#### B-4. 비용 차단 (발표 직후 필수)
+
+```bash
+kubectl delete -f k8s/ingress/ --ignore-not-found   # ALB 정리 대기
+helm uninstall aws-load-balancer-controller -n kube-system || true
+cd terraform && terraform destroy -auto-approve
+# NAT / EKS / ALB 잔존 여부 콘솔·CLI 재확인 (E2E 체크리스트 §6)
+```
+
+```mermaid
+flowchart TB
+  subgraph DemoDay["데모 당일 타임라인"]
+    T0["0. 로컬 Compose 스모크"] --> T1["1. TF apply EKS"]
+    T1 --> T2["2. LB Controller"]
+    T2 --> T3["3. ECR push"]
+    T3 --> T4["4. kubectl apply"]
+    T4 --> T5["5. curl / 브라우저"]
+    T5 --> T6["6. destroy ★필수"]
+  end
+```
+
+---
+
+### 시나리오 비교
+
+| | A. 로컬 | B. AWS EKS |
+|--|---------|------------|
+| 비용 | 없음 | NAT·EKS·노드·ALB (시간 과금) |
+| 시간 | ~5분 | 2.5~4시간 |
+| 증명 | 앱·Docker·API | 네트워크+EKS+Ingress+수명주기 |
+| CI 연관 | `BE CI` 로컬과 동일 테스트 | `Terraform CI` plan 과 코드 동일 |
+
+---
+
+## 빠른 시작
+
+### 필수 도구
+
+- AWS CLI, Terraform ≥ 1.5, Git  
+- 앱/EKS 데모: Docker, kubectl, Helm  
+
+### 로컬 앱 (시나리오 A)
+
+```bash
+docker compose up --build
+# http://localhost:8080
+```
+
+### Terraform (네트워크만, EKS 끔)
+
+```bash
+cd terraform
+cp terraform.tfvars.example terraform.tfvars
+# my_ip 수정 / enable_eks = false 유지
+terraform init
+terraform plan
+terraform apply
+# 끝나면
+terraform destroy
+```
+
+런북: [docs/STAGE_1_APPLY.md](docs/STAGE_1_APPLY.md)
+
+### CI 로컬 동일 검사
+
+```bash
+cd BE && npm ci && npm test
+cd terraform && terraform fmt -check -recursive \
+  && terraform init -backend=false && terraform validate
+```
+
+---
+
+## 디렉터리 구조
+
+```
+cloud-infra-cicd/
+├── README.md                 # 본 문서 (다이어그램 · 데모)
+├── docker-compose.yml        # 로컬 FE+BE
+├── FE/                       # 프론트 (Nginx + 정적)
+├── BE/                       # 백엔드 (Express)
+├── k8s/                      # EKS 매니페스트 · Ingress
+├── terraform/                # VPC/NAT/SG + 선택 EKS/ECR
+├── docs/                     # PRD · 명세 · E2E 체크리스트 · CI
+└── .github/workflows/        # BE CI · Terraform CI
+```
+
+---
+
+## 진행 단계
+
+| 단계 | 목표 | 상태 |
+|------|------|------|
+| 1 | Terraform 네트워크 (NAT 2 · RT 5 · SG) | ✅ 코드 완료 (필요 시 apply/destroy) |
+| 2 | Bastion 등 (레거시 EC2 웹은 P2) | ⚪ 선택 |
+| 3 | GitHub Actions fmt/validate/plan + BE test | ✅ 골격·시크릿 plan 검증 |
+| 4 | EKS + Ingress + ECR 데모 | 🟡 코드·체크리스트 준비, 당일 apply |
+
+상세: [docs/PRD.md](docs/PRD.md)
+
+---
+
+## 프로젝트 문서
+
+| 문서 | 설명 |
+|------|------|
+| [PRD](docs/PRD.md) | 목표, 범위, EKS §14 |
+| [기능 명세서](docs/FUNCTIONAL_SPEC.md) | 기능 ID · 수락 기준 |
+| [architecture](docs/architecture.md) | 네트워크 상세 |
+| [STAGE_1_APPLY](docs/STAGE_1_APPLY.md) | 네트워크 apply 런북 |
+| [EKS_DESIGN](docs/EKS_DESIGN.md) | EKS 설계 |
+| [**EKS_E2E_CHECKLIST**](docs/EKS_E2E_CHECKLIST.md) | **데모 당일 전체 명령** |
+| [CI](docs/CI.md) | Actions · Secrets |
+| [k8s README](k8s/README.md) | 매니페스트 |
+
+---
+
+## 보안·비용
+
+### 보안
+
+- `terraform.tfvars` / `*.tfstate` / `.env` → Git 제외  
+- Bastion·EKS API: `my_ip` 제한 권장  
+- CI: Secrets 또는 **OIDC** ([docs/CI.md](docs/CI.md))  
+- 최소 권한 SG (ALB → 워크로드, DB → Web SG만)
+
+### 비용
+
+| 리소스 | 주의 |
+|--------|------|
+| NAT ×2 | 상시 과금 |
+| EKS 컨트롤 플레인 | **클러스터 유지 시간** 과금 (노드 0이어도) |
+| 노드 EC2 · ALB | 데모 중 과금 |
+| **대응** | 데모 후 **즉시 destroy** + 잔존 ALB/NAT 점검 |
+
+---
+
+## 학습 포인트
+
+- AWS 3-Tier · 2-AZ 네트워크 설계  
+- Terraform IaC · plan/apply/destroy 수명주기  
+- EKS · IRSA · ALB Ingress  
+- 컨테이너 FE/BE · ECR  
+- GitHub Actions CI  
+
+## 참고 링크
+
+- [Terraform](https://www.terraform.io/docs) · [AWS VPC](https://docs.aws.amazon.com/vpc/) · [EKS](https://docs.aws.amazon.com/eks/) · [GitHub Actions](https://docs.github.com/actions)
+
+---
+
+**마지막 업데이트:** 2026-07-17  
+**버전:** v0.3.0 — README 아키텍처 다이어그램 · 데모 시나리오 A/B
