@@ -350,6 +350,7 @@ flowchart TB
 
 ./scripts/integration-test.sh    # Compose curl 자동 검증
 ./scripts/build-images.sh        # linux/amd64 로컬 빌드 (푸시 없음)
+make check                       # fmt + validate + BE test
 ```
 
 ### Terraform (네트워크만, EKS 끔)
@@ -418,6 +419,10 @@ cloud-infra-cicd/
 | [STAGE_1_APPLY](docs/STAGE_1_APPLY.md) | 네트워크 apply 런북 |
 | [BASTION](docs/BASTION.md) | Bastion SSH / SSM 접속 |
 | [**데모 스크린샷 세트**](docs/demo/README.md) | 로컬 UI + E2E 기록 (채용관용) |
+| [**이력서 1페이지**](docs/RESUME_ONE_PAGER.md) | 복붙용 성과·문장 |
+| [**면접 Q&A · Lessons**](docs/INTERVIEW_QA_LESSONS.md) | 면접 준비 |
+| [**OIDC 실전 설정**](docs/OIDC_SETUP.md) | 계정 `447170313588` 맞춤 |
+| [**노션 정리 가이드**](docs/NOTION_GUIDE.md) | 노션 페이지 트리·복붙 템플릿 |
 | [**무료 모드**](docs/FREE_MODE.md) | 과금 없이 개발하는 기본 경로 |
 | [**실습 확인 가이드**](docs/LAB_VERIFY.md) | 콘솔·CLI·FE로 상태 확인 |
 | [EKS_DESIGN](docs/EKS_DESIGN.md) | EKS 설계 |
