@@ -1,0 +1,42 @@
+# BE (Node.js) CI — 테스트
+name: BE CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "BE/**"
+      - ".github/workflows/be-ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "BE/**"
+      - ".github/workflows/be-ci.yml"
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: BE
+
+jobs:
+  test:
+    name: npm test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: BE/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test

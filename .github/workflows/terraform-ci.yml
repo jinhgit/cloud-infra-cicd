@@ -1,0 +1,139 @@
+# Terraform CI — fmt / validate (필수) + plan (AWS 시크릿 있을 때만)
+name: Terraform CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "terraform/**"
+      - ".github/workflows/terraform-ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "terraform/**"
+      - ".github/workflows/terraform-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # OIDC 사용 시 주석 해제:
+  # id-token: write
+
+env:
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+  AWS_REGION: ap-northeast-2
+  # plan 전용 더미 (실제 Bastion IP 아님 — CI 검증용 RFC 5737 문서 대역)
+  TF_VAR_my_ip: "203.0.113.10/32"
+  TF_VAR_enable_eks: "false"
+  TF_VAR_enable_ecr: "false"
+  TF_VAR_environment: "dev"
+  TF_VAR_project_name: "cloud-infra"
+
+jobs:
+  # --------------------------------------------------
+  # 1) fmt + validate — AWS 자격 불필요 (PR 필수 통과)
+  # --------------------------------------------------
+  check:
+    name: fmt & validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: terraform
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.7"
+          terraform_wrapper: false
+
+      - name: terraform fmt -check
+        run: terraform fmt -check -recursive -diff
+
+      - name: terraform init
+        run: terraform init -backend=false
+
+      - name: terraform validate
+        run: terraform validate -no-color
+
+  # --------------------------------------------------
+  # 2) plan — Secrets 에 AWS 키가 있을 때만 실행
+  #    GitHub → Settings → Secrets:
+  #      AWS_ACCESS_KEY_ID
+  #      AWS_SECRET_ACCESS_KEY
+  #    (권장: 이후 OIDC 로 교체 — docs/CI.md)
+  # --------------------------------------------------
+  plan:
+    name: terraform plan
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: terraform
+    # 포크 PR 등 시크릿 없는 환경에서는 plan 스킵 (check 만 필수)
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.7"
+          terraform_wrapper: false
+
+      - name: Detect AWS credentials
+        id: aws
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        run: |
+          if [ -n "${AWS_ACCESS_KEY_ID}" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+            echo "AWS 자격 확인됨 — plan 진행"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::AWS_ACCESS_KEY_ID 시크릿 없음. plan 을 건너뜁니다. docs/CI.md 참고."
+          fi
+
+      - name: Configure AWS credentials
+        if: steps.aws.outputs.configured == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: terraform init
+        if: steps.aws.outputs.configured == 'true'
+        run: terraform init -backend=false
+
+      - name: terraform plan
+        if: steps.aws.outputs.configured == 'true'
+        run: |
+          terraform plan -no-color -input=false \
+            -var="my_ip=${TF_VAR_my_ip}" \
+            -var="enable_eks=false" \
+            -var="enable_ecr=false" \
+            -out=tfplan
+
+      - name: Upload plan artifact
+        if: steps.aws.outputs.configured == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-${{ github.sha }}
+          path: terraform/tfplan
+          retention-days: 7
+
+      - name: Skip notice
+        if: steps.aws.outputs.configured != 'true'
+        run: echo "plan skipped (no AWS secrets)"

@@ -25,8 +25,9 @@
 | [Stage 1 Apply 런북](docs/STAGE_1_APPLY.md) | plan/apply/destroy 실무 절차 |
 | [EKS 설계](docs/EKS_DESIGN.md) | EKS·IRSA·ECR·삭제 순서 |
 | [k8s 매니페스트](k8s/README.md) | FE/BE Ingress 배포 가이드 |
+| [CI 가이드](docs/CI.md) | GitHub Actions (Terraform / BE) |
 
-**읽는 순서 권장:** PRD → 기능 명세서 → 아키텍처 → Stage 1 Apply → EKS 설계 → k8s
+**읽는 순서 권장:** PRD → 기능 명세서 → 아키텍처 → Stage 1 Apply → CI → EKS 설계 → k8s
 
 ## 🏗️ 시스템 아키텍처
 
@@ -139,8 +140,22 @@ cicd/
 │   ├── STAGE_1_APPLY.md               # Stage 1 apply 런북
 │   └── EKS_DESIGN.md                  # EKS 설계
 └── .github/
-    └── workflows/                     # GitHub Actions (예정)
+    └── workflows/
+        ├── be-ci.yml                  # BE npm test
+        └── terraform-ci.yml           # fmt / validate / plan
 ```
+
+### CI 요약
+
+```bash
+# 로컬 동일 검사
+cd BE && npm ci && npm test
+cd terraform && terraform fmt -check -recursive && terraform init -backend=false && terraform validate
+```
+
+- **BE CI:** `BE/**` 변경 시 자동 테스트  
+- **Terraform CI:** `fmt`+`validate` 필수, `plan`은 `AWS_ACCESS_KEY_ID` 시크릿 있을 때만  
+- 설정: [docs/CI.md](docs/CI.md)
 
 ### 앱 로컬 실행 (요약)
 
@@ -226,7 +241,7 @@ terraform state show aws_vpc.main
 |------|------|------|------|
 | 1단계 | 1~2주 | Terraform 네트워크 IaC (NAT 2·RT 5) | 🔴 진행중 |
 | 2단계 | ~1주 | Bastion (레거시 EC2 웹은 선택 P2) | ⚪ 예정 |
-| 3단계 | ~1주 | GitHub Actions (fmt/validate/plan) | ⚪ 예정 |
+| 3단계 | ~1주 | GitHub Actions (fmt/validate/plan + BE test) | 🟡 골격 완료 |
 | 4단계 | ~1–2주 | **EKS + Ingress 앱 + (P1) ECR/CD** | ⚪ 예정 |
 
 상세 범위·성공 기준: [docs/PRD.md](docs/PRD.md) §14 EKS 확장
