@@ -100,7 +100,8 @@ jobs:
         if: steps.aws.outputs.mode == 'oidc'
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          # Role ARN 공개 가능 — Secret 과 동일 (디버깅·누락 방지)
+          role-to-assume: arn:aws:iam::447170313588:role/gha-cloud-infra-cicd-plan
           role-session-name: gha-terraform-plan
           aws-region: ${{ env.AWS_REGION }}
           audience: sts.amazonaws.com

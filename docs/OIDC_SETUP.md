@@ -102,6 +102,12 @@ arn:aws:iam::447170313588:oidc-provider/token.actions.githubusercontent.com
 
 파일 예: `/tmp/gha-trust.json`
 
+> **중요 (2024+ GitHub sub 형식)**  
+> 일부 저장소/조직은 `sub` 에 **owner·repo 숫자 ID** 를 넣습니다.  
+> CloudTrail 예: `repo:jinhgit@267884150/cloud-infra-cicd@1302872585:ref:refs/heads/main`  
+> 구형 `repo:jinhgit/cloud-infra-cicd:*` 만 두면 **AccessDenied** 가 납니다.  
+> 아래처럼 **구형 + ID 포함형** 둘 다 허용하세요.
+
 ```json
 {
   "Version": "2012-10-17",
@@ -117,7 +123,10 @@ arn:aws:iam::447170313588:oidc-provider/token.actions.githubusercontent.com
           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
         },
         "StringLike": {
-          "token.actions.githubusercontent.com:sub": "repo:jinhgit/cloud-infra-cicd:*"
+          "token.actions.githubusercontent.com:sub": [
+            "repo:jinhgit/cloud-infra-cicd:*",
+            "repo:jinhgit@*/cloud-infra-cicd@*:*"
+          ]
         }
       }
     }
@@ -125,8 +134,9 @@ arn:aws:iam::447170313588:oidc-provider/token.actions.githubusercontent.com
 }
 ```
 
-- `sub` 을 `repo:jinhgit/cloud-infra-cicd:ref:refs/heads/main` 만 허용하면 main 만 plan 가능 (더 안전).  
-- PR plan 필요 시 위처럼 `repo:jinhgit/cloud-infra-cicd:*` 권장.
+- 실제 `sub` 확인: CloudTrail `AssumeRoleWithWebIdentity` 이벤트의 `userName` / `principalId`.  
+- main 만 허용하려면 `...:ref:refs/heads/main` 으로 좁히기.  
+- PR plan 은 `...:*` (위 예시) 권장.
 
 ### 3-2. Role 생성
 
